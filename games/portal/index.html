@@ -1,0 +1,2078 @@
+<!DOCTYPE HTML>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Portal WebGL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <script>
+    (async function () {
+      if (!("serviceWorker" in navigator)) return;
+      const COI_SW = "coi-serviceworker.js";
+      const alreadyIsolated = self.crossOriginIsolated;
+      const hasCOI = navigator.serviceWorker.controller?.scriptURL?.includes(COI_SW);
+      if (alreadyIsolated && hasCOI) {
+        console.log("[COI] Already cross-origin isolated, game will load.");
+        return;
+      }
+      const regs = await navigator.serviceWorker.getRegistrations();
+      console.log("[COI] Found " + regs.length + " service worker(s), unregistering all...");
+      await Promise.all(regs.map(r => {
+        console.log("[COI] Unregistering: " + (r.active?.scriptURL || r.scope));
+        return r.unregister();
+      }));
+      console.log("[COI] Registering coi-serviceworker.js...");
+      const reg = await navigator.serviceWorker.register(COI_SW, { scope: "./" });
+      const sw = reg.installing || reg.waiting || reg.active;
+      if (sw && sw.state !== "activated") {
+        console.log("[COI] Waiting for SW to activate...");
+        await new Promise(resolve => {
+          sw.addEventListener("statechange", function handler(e) {
+            console.log("[COI] SW state: " + e.target.state);
+            if (e.target.state === "activated") {
+              sw.removeEventListener("statechange", handler);
+              resolve();
+            }
+          });
+        });
+      }
+      console.log("[COI] SW activated, reloading for isolation...");
+      location.reload();
+    })();
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange: #f4720b;
+      --orange-dim: #a34d08;
+      --blue: #4dc8f4;
+      --blue-dim: #1a6a8a;
+      --bg: #0a0a0a;
+      --surface: #111214;
+      --surface2: #16181c;
+      --border: #1e2124;
+      --text: #c8cdd4;
+      --text-dim: #555c66;
+      --glow-orange: 0 0 20px rgba(244,114,11,0.4);
+      --glow-blue: 0 0 20px rgba(77,200,244,0.3);
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Subtle scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      gap: 0;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 1280px;
+      max-width: 100%;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-area img {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(var(--glow-orange));
+    }
+
+    .title-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title-main {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #fff 0%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .title-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Status pill */
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      min-width: 180px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .status-dot.active {
+      background: var(--orange);
+      box-shadow: 0 0 8px var(--orange);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Fullscreen button */
+    .btn-fullscreen {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid var(--orange-dim);
+      color: var(--orange);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 7px 18px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-fullscreen:hover {
+      background: rgba(244,114,11,0.1);
+      border-color: var(--orange);
+      box-shadow: var(--glow-orange);
+    }
+
+    .btn-fullscreen svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    /* ── Fake fullscreen overlay ── */
+    #fsOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: #000;
+      align-items: center;
+      justify-content: center;
+    }
+    #fsOverlay.active {
+      display: flex;
+    }
+    #fsOverlay canvas {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      border: none !important;
+      outline: none;
+      display: block;
+    }
+
+    /* Hold-ESC exit UI */
+    #escHint {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #escHint.visible { opacity: 1; }
+
+    #escRing {
+      position: relative;
+      width: 52px;
+      height: 52px;
+    }
+    #escRing svg {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+    }
+    #escRing .track {
+      fill: none;
+      stroke: rgba(255,255,255,0.1);
+      stroke-width: 3;
+    }
+    #escRing .fill {
+      fill: none;
+      stroke: var(--orange);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 138.2;
+      stroke-dashoffset: 138.2;
+      transition: stroke-dashoffset 0.05s linear;
+      filter: drop-shadow(0 0 6px var(--orange));
+    }
+    #escLabel {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    /* ── Download toast (fullscreen, top-right) ── */
+    #dlToast {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      z-index: 9200;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 260px;
+      max-width: 340px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #dlToast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .dl-toast-inner {
+      background: rgba(17,18,20,0.92);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--blue);
+      border-radius: 4px;
+      padding: 10px 14px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6), var(--glow-blue);
+    }
+    .dl-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--blue);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .dl-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 8px;
+    }
+    .dl-bar-wrap {
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .dl-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--blue-dim), var(--blue));
+      border-radius: 2px;
+      transition: width 0.25s ease;
+      box-shadow: 0 0 6px var(--blue);
+    }
+    .dl-pct {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-top: 5px;
+      text-align: right;
+    }
+
+    /* ── Canvas frame ── */
+    .canvas-frame {
+      position: relative;
+      width: 1280px;
+      max-width: 100%;
+    }
+
+    /* Corner decorations */
+    .canvas-frame::before,
+    .canvas-frame::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .canvas-frame::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid var(--orange);
+      border-left: 2px solid var(--orange);
+    }
+    .canvas-frame::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid var(--blue);
+      border-right: 2px solid var(--blue);
+    }
+
+    .corner-tr, .corner-bl {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .corner-tr {
+      top: -1px; right: -1px;
+      border-top: 2px solid var(--blue);
+      border-right: 2px solid var(--blue);
+    }
+    .corner-bl {
+      bottom: -1px; left: -1px;
+      border-bottom: 2px solid var(--orange);
+      border-left: 2px solid var(--orange);
+    }
+
+    canvas#canvas {
+      display: block;
+      width: 1280px;
+      height: 800px;
+      max-width: 100%;
+      background: #000;
+      outline: none;
+      border: 1px solid var(--border);
+    }
+
+    /* Loading overlay — shown until game starts */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+      z-index: 10;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+    }
+
+    .portal-rings {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      animation: spin 2s linear infinite;
+    }
+
+    .ring-1 {
+      inset: 0;
+      border-top-color: var(--orange);
+      border-right-color: var(--orange);
+      animation-duration: 1.8s;
+    }
+
+    .ring-2 {
+      inset: 10px;
+      border-bottom-color: var(--blue);
+      border-left-color: var(--blue);
+      animation-duration: 1.2s;
+      animation-direction: reverse;
+    }
+
+    .ring-3 {
+      inset: 22px;
+      border-top-color: rgba(244,114,11,0.5);
+      animation-duration: 2.4s;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .progress-wrap {
+      width: 260px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-inner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--orange), var(--blue));
+      transition: width 0.3s ease;
+      border-radius: 2px;
+    }
+
+    /* ── Footer / log ── */
+    .footer {
+      width: 1280px;
+      max-width: 100%;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .log-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    textarea#output {
+      width: 100%;
+      height: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: #4a7a4a;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      padding: 10px 14px;
+      resize: none;
+      outline: none;
+    }
+
+    textarea#output:focus {
+      border-color: var(--orange-dim);
+    }
+
+    /* ════════════════════════════════════════════
+       SIDE PANEL TABS (edge toggles)
+    ════════════════════════════════════════════ */
+    .panel-tab {
+      position: fixed;
+      top: 50%;
+      z-index: 600;
+      cursor: pointer;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 7px;
+      writing-mode: vertical-rl;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      user-select: none;
+      transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-tab-left {
+      left: 0;
+      transform: translateY(-50%) rotate(180deg);
+      border-left: none;
+      border-radius: 0 4px 4px 0;
+      color: var(--orange-dim);
+    }
+    .panel-tab-left:hover, .panel-tab-left.open {
+      color: var(--orange);
+      border-color: var(--orange-dim);
+      box-shadow: 3px 0 16px rgba(244,114,11,0.25);
+      background: rgba(244,114,11,0.05);
+    }
+
+    .panel-tab-right {
+      right: 0;
+      transform: translateY(-50%);
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      color: var(--blue-dim);
+    }
+    .panel-tab-right:hover, .panel-tab-right.open {
+      color: var(--blue);
+      border-color: var(--blue-dim);
+      box-shadow: -3px 0 16px rgba(77,200,244,0.25);
+      background: rgba(77,200,244,0.05);
+    }
+
+    .panel-tab-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    /* ════════════════════════════════════════════
+       SIDE PANELS
+    ════════════════════════════════════════════ */
+    .side-panel {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      z-index: 550;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .side-panel-left {
+      left: 0;
+      width: 310px;
+      background: var(--surface);
+      border-right: 1px solid var(--orange-dim);
+      box-shadow: 4px 0 32px rgba(0,0,0,0.7);
+      transform: translateX(-100%);
+    }
+    .side-panel-left.open {
+      transform: translateX(0);
+    }
+
+    .side-panel-right {
+      right: 0;
+      width: 400px;
+      background: #0b0e0b;
+      border-left: 1px solid var(--blue-dim);
+      box-shadow: -4px 0 32px rgba(0,0,0,0.7);
+      transform: translateX(100%);
+    }
+    .side-panel-right.open {
+      transform: translateX(0);
+    }
+
+    /* Panel shared header */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .side-panel-left .panel-title { color: var(--orange); }
+    .side-panel-right .panel-title { color: var(--blue); }
+
+    .panel-title-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+    .side-panel-left .panel-title-dot { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+    .side-panel-right .panel-title-dot { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+
+    .panel-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 2px 5px;
+      font-size: 18px;
+      line-height: 1;
+      transition: color 0.2s;
+      font-family: monospace;
+    }
+    .panel-close:hover { color: var(--text); }
+
+    /* ════════════════════════════════════════════
+       CACHE PANEL
+    ════════════════════════════════════════════ */
+    .cache-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .cache-status-bar {
+      background: rgba(244,114,11,0.06);
+      border: 1px solid rgba(244,114,11,0.15);
+      border-radius: 3px;
+      padding: 8px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cache-status-count {
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .cache-section {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .cache-section-header {
+      background: rgba(255,255,255,0.025);
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .section-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      padding: 2px 6px;
+      border-radius: 2px;
+      margin-left: auto;
+    }
+    .badge-orange { background: rgba(244,114,11,0.15); color: var(--orange); border: 1px solid rgba(244,114,11,0.3); }
+    .badge-blue   { background: rgba(77,200,244,0.1);  color: var(--blue);   border: 1px solid rgba(77,200,244,0.25); }
+
+    .cache-section-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cache-file-list {
+      max-height: 110px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+      padding: 6px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .cache-file-item {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      padding: 1px 0;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cache-file-item::before {
+      content: '';
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .cache-file-item.cached { color: #4a7a4a; }
+    .cache-file-item.cached::before { background: #4a7a4a; }
+    .cache-file-item.failed { color: #7a3a3a; }
+    .cache-file-item.failed::before { background: #7a3a3a; }
+
+    .btn-cache-action {
+      background: transparent;
+      border: 1px solid var(--orange-dim);
+      color: var(--orange);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+      width: 100%;
+    }
+    .btn-cache-action:hover:not(:disabled) {
+      background: rgba(244,114,11,0.1);
+      box-shadow: var(--glow-orange);
+    }
+    .btn-cache-action:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-cache-maps {
+      border-color: var(--blue-dim);
+      color: var(--blue);
+    }
+    .btn-cache-maps:hover:not(:disabled) {
+      background: rgba(77,200,244,0.08);
+      box-shadow: var(--glow-blue);
+    }
+
+    .btn-reset-cache {
+      background: transparent;
+      border: 1px solid #4a1818;
+      color: #b03030;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      width: 100%;
+    }
+    .btn-reset-cache:hover {
+      background: rgba(176,48,48,0.1);
+      border-color: #7a2020;
+    }
+
+    /* Map selection */
+    .map-controls-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn-map-sel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-map-sel:hover { color: var(--text); border-color: var(--text-dim); }
+
+    .map-list {
+      max-height: 185px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .map-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 2px;
+      border-radius: 2px;
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+    .map-checkbox-item:hover { background: rgba(255,255,255,0.04); }
+
+    .map-checkbox-item input[type="checkbox"] {
+      accent-color: var(--blue);
+      width: 12px;
+      height: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .map-checkbox-item label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .map-cached-indicator {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #4a7a4a;
+      letter-spacing: 0.05em;
+    }
+
+    /* ════════════════════════════════════════════
+       CACHE LOADING OVERLAY
+    ════════════════════════════════════════════ */
+    #cacheLoadingOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9500;
+      background: rgba(0,0,0,0.88);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    #cacheLoadingOverlay.active { display: flex; }
+
+    .cache-loading-box {
+      background: var(--surface);
+      border: 1px solid var(--orange-dim);
+      border-radius: 6px;
+      padding: 36px 44px;
+      width: 440px;
+      max-width: 92vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+      box-shadow: var(--glow-orange), 0 12px 60px rgba(0,0,0,0.9);
+    }
+
+    .cache-loading-rings {
+      position: relative;
+      width: 60px;
+      height: 60px;
+    }
+    .cache-loading-rings .ring { border-width: 2px; }
+    .cache-loading-rings .ring-1 { inset: 0; animation-duration: 1.6s; }
+    .cache-loading-rings .ring-2 { inset: 8px; animation-duration: 1.1s; }
+    .cache-loading-rings .ring-3 { inset: 18px; animation-duration: 2.2s; }
+
+    .cache-loading-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--orange);
+      text-transform: uppercase;
+    }
+
+    .cache-loading-file {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.07em;
+      text-align: center;
+      min-height: 16px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cache-loading-pct {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 36px;
+      font-weight: 300;
+      color: var(--text);
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+
+    .cache-loading-progress-wrap {
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #cacheProgressFill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--orange), var(--blue));
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px var(--orange);
+    }
+
+    .cache-loading-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.14em;
+    }
+
+    .cache-loading-errors {
+      width: 100%;
+      max-height: 60px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #b03030;
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+      display: none;
+    }
+    .cache-loading-errors.has-errors { display: block; }
+
+    /* ════════════════════════════════════════════
+       CONSOLE PANEL (RIGHT)
+    ════════════════════════════════════════════ */
+    .console-panel-body {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .console-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10.5px;
+      line-height: 1.65;
+      background: #080a08;
+      scrollbar-width: thin;
+      scrollbar-color: #1e2420 transparent;
+    }
+
+    .console-line {
+      margin: 0;
+      padding: 0;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .console-line + .console-line { margin-top: 1px; }
+
+    .console-line.log    { color: #4a8a4a; }
+    .console-line.warn   { color: #b08a28; }
+    .console-line.error  { color: #b04040; }
+    .console-line.info   { color: #3a7ab0; }
+    .console-line.debug  { color: #555c66; }
+    .console-line.cmd    { color: var(--orange); margin-top: 4px; }
+    .console-line.result { color: #668866; padding-left: 14px; }
+    .console-line.res-err { color: #884444; padding-left: 14px; }
+
+    /* timestamp prefix */
+    .console-ts {
+      color: #2a3a2a;
+      margin-right: 4px;
+      font-size: 9px;
+    }
+
+    .console-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .console-filter-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .console-filter-btn:hover { color: var(--text); border-color: var(--border); }
+    .console-filter-btn.active-log   { color: #4a8a4a; border-color: #2a4a2a; background: rgba(74,138,74,0.08); }
+    .console-filter-btn.active-warn  { color: #b08a28; border-color: #6a5218; background: rgba(176,138,40,0.08); }
+    .console-filter-btn.active-error { color: #b04040; border-color: #6a2020; background: rgba(176,64,64,0.08); }
+    .console-filter-btn.active-all   { color: var(--blue); border-color: var(--blue-dim); background: rgba(77,200,244,0.08); }
+
+    .console-toolbar-spacer { flex: 1; }
+
+    .console-clear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .console-clear-btn:hover { color: var(--text); }
+
+    .console-input-row {
+      display: flex;
+      align-items: stretch;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    .console-prompt-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--orange);
+      padding: 0 6px 0 12px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .console-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      padding: 10px 0;
+      letter-spacing: 0.04em;
+      caret-color: var(--orange);
+    }
+    .console-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+    .console-run-btn {
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--orange);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .console-run-btn:hover { background: rgba(244,114,11,0.1); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Left Panel Tab (Cache) ── -->
+  <div class="panel-tab panel-tab-left" id="cachePanelTab" onclick="togglePanel('cache')" title="Toggle Cache Manager">
+    <span class="panel-tab-icon">⊟</span>
+    CACHE
+  </div>
+
+  <!-- ── Right Panel Tab (Console) ── -->
+  <div class="panel-tab panel-tab-right" id="consolePanelTab" onclick="togglePanel('console')" title="Toggle Console">
+    <span class="panel-tab-icon">&gt;_</span>
+    CONSOLE
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       LEFT PANEL — Cache Manager
+  ══════════════════════════════════════════ -->
+  <div class="side-panel side-panel-left" id="cachePanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-dot"></div>
+        Cache Manager
+      </div>
+      <button class="panel-close" onclick="togglePanel('cache')" title="Close">×</button>
+    </div>
+
+    <div class="cache-panel-body">
+
+      <!-- Status bar -->
+      <div class="cache-status-bar">
+        <span>Cached files</span>
+        <span class="cache-status-count" id="cacheFileCount">—</span>
+      </div>
+
+      <!-- Option 1: Bootstrap -->
+      <div class="cache-section">
+        <div class="cache-section-header">
+          ⊞ Bootstrap
+          <span class="section-badge badge-orange" id="bootstrapBadge">30 FILES</span>
+        </div>
+        <div class="cache-section-body">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.06em;line-height:1.6;">
+            Caches all core engine files: .js, .wasm, .html, .svg, and all .so shared libraries.
+          </div>
+          <div class="cache-file-list" id="bootstrapFileList">
+            <!-- populated by JS -->
+          </div>
+          <button class="btn-cache-action" id="btnCacheBootstrap" onclick="startCacheBootstrap()">
+            ⬇ Cache Bootstrap Files
+          </button>
+        </div>
+      </div>
+
+      <!-- Option 2: Maps -->
+      <div class="cache-section">
+        <div class="cache-section-header">
+          ⊟ Maps
+          <span class="section-badge badge-blue" id="mapsBadge">17 MAPS</span>
+        </div>
+        <div class="cache-section-body">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.06em;line-height:1.6;">
+            Select individual maps to pre-cache from <code style="color:var(--blue-dim)">chunks/</code>.
+          </div>
+
+          <div class="map-controls-row">
+            <button class="btn-map-sel" onclick="selectAllMaps(true)">All</button>
+            <button class="btn-map-sel" onclick="selectAllMaps(false)">None</button>
+            <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);margin-left:auto;" id="mapSelectedCount">0 selected</span>
+          </div>
+
+          <div class="map-list" id="mapList">
+            <!-- populated by JS -->
+          </div>
+
+          <button class="btn-cache-action btn-cache-maps" id="btnCacheMaps" onclick="startCacheMaps()">
+            ⬇ Cache Selected Maps
+          </button>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="cache-section">
+        <div class="cache-section-body">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:0.06em;line-height:1.6;">
+            Clears all cached Portal game files from this browser.
+          </div>
+          <button class="btn-reset-cache" onclick="resetCache()">
+            ✕ Reset All Cache
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       RIGHT PANEL — Console
+  ══════════════════════════════════════════ -->
+  <div class="side-panel side-panel-right" id="consolePanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-dot"></div>
+        Console
+      </div>
+      <button class="panel-close" onclick="togglePanel('console')" title="Close">×</button>
+    </div>
+
+    <!-- Filter toolbar -->
+    <div class="console-toolbar">
+      <button class="console-filter-btn active-all" data-filter="all"   onclick="setConsoleFilter('all')">All</button>
+      <button class="console-filter-btn"            data-filter="log"   onclick="setConsoleFilter('log')">Log</button>
+      <button class="console-filter-btn"            data-filter="warn"  onclick="setConsoleFilter('warn')">Warn</button>
+      <button class="console-filter-btn"            data-filter="error" onclick="setConsoleFilter('error')">Error</button>
+      <div class="console-toolbar-spacer"></div>
+      <button class="console-clear-btn" onclick="clearConsolePanel()">Clear</button>
+    </div>
+
+    <div class="console-panel-body">
+      <div class="console-output" id="consolePanelOutput"></div>
+
+      <!-- Command input -->
+      <div class="console-input-row">
+        <span class="console-prompt-label">&gt;</span>
+        <input
+          class="console-input"
+          id="consoleInput"
+          type="text"
+          placeholder="JavaScript command..."
+          autocomplete="off"
+          spellcheck="false"
+          onkeydown="handleConsoleKey(event)"
+        />
+        <button class="console-run-btn" onclick="runConsoleCommand()">RUN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       CACHE LOADING OVERLAY
+  ══════════════════════════════════════════ -->
+  <div id="cacheLoadingOverlay">
+    <div class="cache-loading-box">
+      <div class="cache-loading-rings portal-rings">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+      </div>
+      <div class="cache-loading-title">Caching Files</div>
+      <div class="cache-loading-pct" id="cacheLoadPct">0%</div>
+      <div class="cache-loading-progress-wrap">
+        <div id="cacheProgressFill"></div>
+      </div>
+      <div class="cache-loading-count" id="cacheLoadCount">0 / 0 files</div>
+      <div class="cache-loading-file" id="cacheLoadFile">Preparing...</div>
+      <div class="cache-loading-errors" id="cacheLoadErrors"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MAIN PAGE
+  ══════════════════════════════════════════ -->
+  <div class="wrapper">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <div class="title-block">
+          <span class="title-main">Portal</span>
+          <span class="title-sub">Aperture Science Computer-Aided Enrichment Center</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-pill">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="status">Downloading...</span>
+        </div>
+        <button class="btn-fullscreen" id="btnFullscreen" onclick="enterFakeFullscreen()">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/>
+          </svg>
+          Fullscreen
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas -->
+    <div class="canvas-frame">
+      <div class="corner-tr"></div>
+      <div class="corner-bl"></div>
+
+      <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+
+      <!-- Loading overlay -->
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="portal-rings">
+          <div class="ring ring-1"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-3"></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar-inner" id="progressInner"></div>
+        </div>
+        <div class="loading-text" id="loadingText">Initializing...</div>
+      </div>
+    </div>
+
+    <!-- Log output -->
+    <div class="footer">
+      <div class="log-header">Console Output</div>
+      <textarea id="output" rows="6" readonly></textarea>
+    </div>
+
+  </div>
+
+  <!-- Fake fullscreen overlay -->
+  <div id="fsOverlay"></div>
+
+  <!-- Hold-ESC hint -->
+  <div id="escHint">
+    <div id="escRing">
+      <svg viewBox="0 0 52 52" width="52" height="52">
+        <circle class="track" cx="26" cy="26" r="22"/>
+        <circle class="fill" id="escArc" cx="26" cy="26" r="22"/>
+      </svg>
+    </div>
+    <div id="escLabel">Hold ESC<br>to exit</div>
+  </div>
+
+  <!-- Download toast (shown in fullscreen) -->
+  <div id="dlToast">
+    <div class="dl-toast-inner">
+      <div class="dl-label">Downloading</div>
+      <div class="dl-name" id="dlName">—</div>
+      <div class="dl-bar-wrap"><div class="dl-bar-fill" id="dlBarFill"></div></div>
+      <div class="dl-pct" id="dlPct">0%</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════ -->
+  <script type='text/javascript'>
+
+    /* ─────────────────────────────────────────
+       GAME MODULE SETUP (original)
+    ───────────────────────────────────────── */
+    var statusElement   = document.getElementById('status');
+    var statusDot       = document.getElementById('statusDot');
+    var canvasElement   = document.getElementById('canvas');
+    var outputElement   = document.getElementById('output');
+    var loadingOverlay  = document.getElementById('loadingOverlay');
+    var loadingText     = document.getElementById('loadingText');
+    var progressInner   = document.getElementById('progressInner');
+
+    if (outputElement) outputElement.value = '';
+
+    canvasElement.addEventListener('webglcontextlost', (e) => {
+      alert('WebGL context lost. You will need to reload the page.');
+      e.preventDefault();
+    }, false);
+
+    canvasElement.widthNative  = 1280;
+    canvasElement.heightNative = 800;
+    canvasElement.width  = 1280;
+    canvasElement.height = 800;
+
+    var Module = {
+      print(...args) {
+        console.log(...args);
+        if (outputElement) {
+          var text = args.join(' ');
+          outputElement.value += text + "\n";
+          outputElement.scrollTop = outputElement.scrollHeight;
+        }
+      },
+      canvas: canvasElement,
+      setStatus(text) {
+        Module.setStatus.last ??= { time: Date.now(), text: '' };
+        if (text === Module.setStatus.last.text) return;
+        var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+        var now = Date.now();
+        if (m && now - Module.setStatus.last.time < 30) return;
+        Module.setStatus.last.time = now;
+        Module.setStatus.last.text = text;
+
+        if (m) {
+          var label = m[1].trim();
+          var pct   = (parseInt(m[2]) / parseInt(m[4])) * 100;
+          statusElement.textContent = label;
+          loadingText.textContent   = label;
+          progressInner.style.width = pct + '%';
+          statusDot.classList.add('active');
+        } else {
+          statusElement.textContent = text || 'Ready';
+          loadingText.textContent   = text || 'Ready';
+          if (!text) {
+            loadingOverlay.classList.add('hidden');
+            statusDot.classList.remove('active');
+          } else {
+            statusDot.classList.add('active');
+          }
+        }
+      },
+      totalDependencies: 0,
+      monitorRunDependencies(left) {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        var done = this.totalDependencies - left;
+        Module.setStatus(left
+          ? 'Preparing... (' + done + '/' + this.totalDependencies + ')'
+          : 'All downloads complete.');
+      }
+    };
+
+    Module.setStatus('Downloading...');
+
+    window.onerror = (event) => {
+      Module.setStatus('Exception thrown, see JavaScript console');
+      Module.setStatus = (text) => {
+        if (text) console.error('[post-exception status] ' + text);
+      };
+    };
+
+    /* ─────────────────────────────────────────
+       FAKE FULLSCREEN (original)
+    ───────────────────────────────────────── */
+    var fsOverlay    = document.getElementById('fsOverlay');
+    var escHint      = document.getElementById('escHint');
+    var escArc       = document.getElementById('escArc');
+    var headerEl     = document.querySelector('.header');
+    var footerEl     = document.querySelector('.footer');
+    var canvasParent = canvasElement.parentNode;
+    var canvasNext   = canvasElement.nextSibling;
+    var isFakeFS     = false;
+    var escHoldTimer = null;
+    var escLingerTimer = null;
+    var escStart     = 0;
+    var ESC_HOLD_MS  = 1500;
+    var ESC_LINGER_MS = 2000;
+    var CIRCUMF      = 138.2;
+
+    function showEscHint() {
+      if (escLingerTimer) { clearTimeout(escLingerTimer); escLingerTimer = null; }
+      escHint.classList.add('visible');
+    }
+
+    function hideEscHintSoon() {
+      if (escLingerTimer) clearTimeout(escLingerTimer);
+      escLingerTimer = setTimeout(function() {
+        escHint.classList.remove('visible');
+        escLingerTimer = null;
+      }, ESC_LINGER_MS);
+    }
+
+    function enterFakeFullscreen() {
+      if (isFakeFS) return;
+      isFakeFS = true;
+      canvasParent = canvasElement.parentNode;
+      canvasNext   = canvasElement.nextSibling;
+      fsOverlay.appendChild(canvasElement);
+      fsOverlay.classList.add('active');
+      headerEl.style.display = 'none';
+      footerEl.style.display = 'none';
+      canvasElement.focus();
+    }
+
+    function exitFakeFullscreen() {
+      if (!isFakeFS) return;
+      isFakeFS = false;
+      fsOverlay.classList.remove('active');
+      headerEl.style.display = '';
+      footerEl.style.display = '';
+      escHint.classList.remove('visible');
+      if (escLingerTimer) { clearTimeout(escLingerTimer); escLingerTimer = null; }
+      if (canvasNext) {
+        canvasParent.insertBefore(canvasElement, canvasNext);
+      } else {
+        canvasParent.appendChild(canvasElement);
+      }
+      cancelEscHold();
+    }
+
+    function cancelEscHold() {
+      if (escHoldTimer) { clearInterval(escHoldTimer); escHoldTimer = null; }
+      escArc.style.strokeDashoffset = CIRCUMF;
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (!isFakeFS) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (escHoldTimer) return;
+        showEscHint();
+        escStart = Date.now();
+        escHoldTimer = setInterval(function() {
+          var elapsed = Date.now() - escStart;
+          var pct = Math.min(elapsed / ESC_HOLD_MS, 1);
+          escArc.style.strokeDashoffset = CIRCUMF * (1 - pct);
+          if (pct >= 1) exitFakeFullscreen();
+        }, 30);
+      }
+    }, true);
+
+    document.addEventListener('keyup', function(e) {
+      if (e.key === 'Escape' && isFakeFS) {
+        cancelEscHold();
+        hideEscHintSoon();
+      }
+    }, true);
+
+    /* ─────────────────────────────────────────
+       DOWNLOAD TOAST (original)
+    ───────────────────────────────────────── */
+    var dlToast   = document.getElementById('dlToast');
+    var dlName    = document.getElementById('dlName');
+    var dlBarFill = document.getElementById('dlBarFill');
+    var dlPct     = document.getElementById('dlPct');
+    var dlHideTimer = null;
+
+    function showDlToast(label, pct) {
+      if (dlHideTimer) { clearTimeout(dlHideTimer); dlHideTimer = null; }
+      dlName.textContent    = label;
+      var p = Math.round(Math.min(Math.max(pct, 0), 100));
+      dlBarFill.style.width = p + '%';
+      dlPct.textContent     = p + '%';
+      dlToast.classList.add('visible');
+    }
+
+    function hideDlToast(delay) {
+      if (dlHideTimer) clearTimeout(dlHideTimer);
+      dlHideTimer = setTimeout(function() {
+        dlToast.classList.remove('visible');
+        dlHideTimer = null;
+      }, delay || 3000);
+    }
+
+    var _origSetStatus = Module.setStatus;
+    Module.setStatus = function(text) {
+      _origSetStatus.call(this, text);
+      if (!isFakeFS) return;
+      if (!text) { hideDlToast(3000); return; }
+      var m = text.match(/([^(]+)\((\d+(?:\.\d+)?)\/(\d+)\)/);
+      if (m) {
+        var label = m[1].trim();
+        var pct   = (parseFloat(m[2]) / parseFloat(m[4])) * 100;
+        showDlToast(label, pct);
+        if (pct >= 100) hideDlToast(3000);
+      } else {
+        showDlToast(text, 0);
+        if (/complete|ready|done/i.test(text)) hideDlToast(3000);
+      }
+    };
+
+    /* ═════════════════════════════════════════
+       PANEL TOGGLE
+    ═════════════════════════════════════════ */
+    var panelStates = { cache: false, console: false };
+
+    function togglePanel(which) {
+      panelStates[which] = !panelStates[which];
+      var panel = document.getElementById(which === 'cache' ? 'cachePanel' : 'consolePanel');
+      var tab   = document.getElementById(which === 'cache' ? 'cachePanelTab' : 'consolePanelTab');
+      panel.classList.toggle('open', panelStates[which]);
+      tab.classList.toggle('open', panelStates[which]);
+
+      // Refresh cache status when opening the cache panel
+      if (which === 'cache' && panelStates[which]) {
+        refreshCacheStatus();
+      }
+      // Focus console input when opening
+      if (which === 'console' && panelStates[which]) {
+        setTimeout(function() {
+          document.getElementById('consoleInput').focus();
+        }, 320);
+      }
+    }
+
+    /* ═════════════════════════════════════════
+       CONSOLE PANEL
+    ═════════════════════════════════════════ */
+    var consolePanelOutput = document.getElementById('consolePanelOutput');
+    var consoleInput       = document.getElementById('consoleInput');
+    var consoleHistory     = [];
+    var consoleHistoryIdx  = -1;
+    var consoleFilter      = 'all';
+
+    function nowTs() {
+      var d = new Date();
+      return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+    }
+
+    function appendConsoleLine(type, text) {
+      if (consoleFilter !== 'all' && type !== 'cmd' && type !== 'result' && type !== 'res-err' && type !== consoleFilter) {
+        return;
+      }
+      var line = document.createElement('div');
+      line.className = 'console-line ' + type;
+      line.dataset.type = type;
+
+      var ts = document.createElement('span');
+      ts.className = 'console-ts';
+      ts.textContent = nowTs() + ' ';
+      line.appendChild(ts);
+
+      var body = document.createTextNode(text);
+      line.appendChild(body);
+
+      consolePanelOutput.appendChild(line);
+      consolePanelOutput.scrollTop = consolePanelOutput.scrollHeight;
+    }
+
+    function setConsoleFilter(filter) {
+      consoleFilter = filter;
+      // Update button states
+      document.querySelectorAll('.console-filter-btn').forEach(function(btn) {
+        btn.className = btn.className.replace(/active-\w+/g, '').trim();
+        if (btn.dataset.filter === filter) {
+          btn.classList.add('active-' + filter);
+        }
+      });
+      // Re-render: show/hide lines based on filter
+      var lines = consolePanelOutput.querySelectorAll('.console-line');
+      lines.forEach(function(line) {
+        var t = line.dataset.type;
+        if (filter === 'all' || t === 'cmd' || t === 'result' || t === 'res-err') {
+          line.style.display = '';
+        } else {
+          line.style.display = t === filter ? '' : 'none';
+        }
+      });
+    }
+
+    function clearConsolePanel() {
+      consolePanelOutput.innerHTML = '';
+    }
+
+    function handleConsoleKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runConsoleCommand();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (consoleHistoryIdx < consoleHistory.length - 1) {
+          consoleHistoryIdx++;
+          consoleInput.value = consoleHistory[consoleHistory.length - 1 - consoleHistoryIdx];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (consoleHistoryIdx > 0) {
+          consoleHistoryIdx--;
+          consoleInput.value = consoleHistory[consoleHistory.length - 1 - consoleHistoryIdx];
+        } else {
+          consoleHistoryIdx = -1;
+          consoleInput.value = '';
+        }
+      }
+    }
+
+    function runConsoleCommand() {
+      var cmd = consoleInput.value.trim();
+      if (!cmd) return;
+
+      consoleHistory.push(cmd);
+      consoleHistoryIdx = -1;
+      consoleInput.value = '';
+
+      appendConsoleLine('cmd', '> ' + cmd);
+
+      try {
+        // Allow access to Module and other game globals
+        var result = (function() {
+          with (window) { return eval(cmd); }
+        })();
+        if (result !== undefined) {
+          appendConsoleLine('result', String(result));
+        }
+      } catch (err) {
+        appendConsoleLine('res-err', '✕ ' + err.message);
+      }
+    }
+
+    // Intercept console methods
+    (function() {
+      var methods = ['log', 'warn', 'error', 'info', 'debug'];
+      methods.forEach(function(method) {
+        var orig = console[method].bind(console);
+        console[method] = function() {
+          orig.apply(console, arguments);
+          var text = Array.from(arguments).map(function(a) {
+            if (typeof a === 'object') {
+              try { return JSON.stringify(a, null, 0); } catch(e) { return String(a); }
+            }
+            return String(a);
+          }).join(' ');
+          appendConsoleLine(method, text);
+        };
+      });
+    })();
+
+    /* ═════════════════════════════════════════
+       CACHE MANAGER — File Lists
+    ═════════════════════════════════════════ */
+    var CACHE_NAME = 'portal-game-v1';
+
+    var BOOTSTRAP_FILES = [
+      // JS / WASM / HTML
+      'hl2_launcher.js',
+      'coi-serviceworker.js',
+      'hl2_launcher.wasm',
+      // .so shared libraries
+      'libclient.so',
+      'libdatacache.so',
+      'libengine.so',
+      'libfilesystem_stdio.so',
+      'libinputsystem.so',
+      'liblauncher.so',
+      'libmaterialsystem.so',
+      'libscenefilecache.so',
+      'libserver.so',
+      'libServerBrowser.so',
+      'libshaderapidx9.so',
+      'libsoundemittersystem.so',
+      'libstdshader_dx9.so',
+      'libsteam_api.so',
+      'libstudiorender.so',
+      'libtier0.so',
+      'libtogl.so',
+      'libvaudio_minimp3.so',
+      'libvgui2.so',
+      'libvguimatsurface.so',
+      'libvideo_services.so',
+      'libvphysics.so',
+      'libvstdlib.so',
+      'libvtex_dll.so'
+    ];
+
+    var MAP_NAMES = [
+      'testchmb_a_00',
+      'testchmb_a_01',
+      'testchmb_a_02',
+      'testchmb_a_03',
+      'testchmb_a_04',
+      'testchmb_a_05',
+      'testchmb_a_06',
+      'testchmb_a_07',
+      'testchmb_a_08',
+      'testchmb_a_09',
+      'testchmb_a_10',
+      'testchmb_a_11',
+      'testchmb_a_12',
+      'testchmb_a_13',
+      'testchmb_a_14',
+      'testchmb_a_15',
+    ];
+
+    var MAP_FILES = MAP_NAMES.map(function(n) { return 'chunks/' + n + '.data'; });
+
+    /* ─── Build bootstrap file list UI ─── */
+    (function buildBootstrapList() {
+      var list = document.getElementById('bootstrapFileList');
+      BOOTSTRAP_FILES.forEach(function(f) {
+        var item = document.createElement('div');
+        item.className = 'cache-file-item';
+        item.id = 'bsfile_' + f.replace(/[^a-zA-Z0-9]/g, '_');
+        item.textContent = f;
+        list.appendChild(item);
+      });
+      document.getElementById('bootstrapBadge').textContent = BOOTSTRAP_FILES.length + ' FILES';
+    })();
+
+    /* ─── Build maps list UI ─── */
+    (function buildMapList() {
+      var list = document.getElementById('mapList');
+      MAP_NAMES.forEach(function(name, i) {
+        var item = document.createElement('div');
+        item.className = 'map-checkbox-item';
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = 'map_cb_' + i;
+        cb.dataset.file = MAP_FILES[i];
+        cb.dataset.name = name;
+        cb.onchange = updateMapSelectedCount;
+
+        var lbl = document.createElement('label');
+        lbl.htmlFor = 'map_cb_' + i;
+        lbl.textContent = name;
+
+        var ind = document.createElement('span');
+        ind.className = 'map-cached-indicator';
+        ind.id = 'map_ind_' + i;
+
+        item.appendChild(cb);
+        item.appendChild(lbl);
+        item.appendChild(ind);
+        list.appendChild(item);
+      });
+      document.getElementById('mapsBadge').textContent = MAP_NAMES.length + ' MAPS';
+    })();
+
+    function updateMapSelectedCount() {
+      var checked = document.querySelectorAll('#mapList input[type="checkbox"]:checked').length;
+      document.getElementById('mapSelectedCount').textContent = checked + ' selected';
+    }
+
+    function selectAllMaps(val) {
+      document.querySelectorAll('#mapList input[type="checkbox"]').forEach(function(cb) {
+        cb.checked = val;
+      });
+      updateMapSelectedCount();
+    }
+
+    /* ═════════════════════════════════════════
+       CACHE STATUS CHECK
+    ═════════════════════════════════════════ */
+    async function refreshCacheStatus() {
+      if (!('caches' in window)) {
+        document.getElementById('cacheFileCount').textContent = 'N/A';
+        return;
+      }
+      try {
+        var cache = await caches.open(CACHE_NAME);
+        var keys  = await cache.keys();
+        var urls  = keys.map(function(r) { return new URL(r.url).pathname.replace(/^\//, ''); });
+
+        document.getElementById('cacheFileCount').textContent = keys.length;
+
+        // Update bootstrap indicators
+        BOOTSTRAP_FILES.forEach(function(f) {
+          var el = document.getElementById('bsfile_' + f.replace(/[^a-zA-Z0-9]/g, '_'));
+          if (el) {
+            el.className = 'cache-file-item ' + (urls.includes(f) ? 'cached' : '');
+          }
+        });
+
+        // Update map indicators
+        MAP_NAMES.forEach(function(name, i) {
+          var file = MAP_FILES[i];
+          var ind  = document.getElementById('map_ind_' + i);
+          if (ind) {
+            ind.textContent = urls.some(function(u) { return u.endsWith(file); }) ? '✓' : '';
+          }
+        });
+      } catch(e) {
+        console.error('Cache status check failed:', e.message);
+        document.getElementById('cacheFileCount').textContent = 'ERR';
+      }
+    }
+
+    /* ═════════════════════════════════════════
+       CACHE LOADING UI HELPERS
+    ═════════════════════════════════════════ */
+    var cacheOverlay   = document.getElementById('cacheLoadingOverlay');
+    var cachePctEl     = document.getElementById('cacheLoadPct');
+    var cacheBarEl     = document.getElementById('cacheProgressFill');
+    var cacheCountEl   = document.getElementById('cacheLoadCount');
+    var cacheFileEl    = document.getElementById('cacheLoadFile');
+    var cacheErrorsEl  = document.getElementById('cacheLoadErrors');
+    var cacheErrors    = [];
+    var cacheCancelled = false;
+
+    function showCacheLoading(title) {
+      cacheErrors = [];
+      cacheErrorsEl.textContent = '';
+      cacheErrorsEl.classList.remove('has-errors');
+      setCacheProgress(0, 0, 1, title || 'Preparing...');
+      cacheOverlay.classList.add('active');
+    }
+
+    function hideCacheLoading() {
+      cacheOverlay.classList.remove('active');
+      if (cacheErrors.length) {
+        appendConsoleLine('warn', 'Cache: ' + cacheErrors.length + ' file(s) failed to cache.');
+      }
+    }
+
+    function setCacheProgress(done, total, fileLabel) {
+      var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      cachePctEl.textContent   = pct + '%';
+      cacheBarEl.style.width   = pct + '%';
+      cacheCountEl.textContent = done + ' / ' + total + ' files';
+      cacheFileEl.textContent  = fileLabel || '';
+    }
+
+    function addCacheError(file, msg) {
+      cacheErrors.push(file);
+      cacheErrorsEl.textContent += '✕ ' + file + ': ' + msg + '\n';
+      cacheErrorsEl.classList.add('has-errors');
+    }
+
+    /* ═════════════════════════════════════════
+       CACHE BOOTSTRAP
+    ═════════════════════════════════════════ */
+    async function startCacheBootstrap() {
+      if (!('caches' in window)) {
+        alert('Cache API not available. Ensure the page is served over HTTPS.');
+        return;
+      }
+      document.getElementById('btnCacheBootstrap').disabled = true;
+      showCacheLoading('Caching Bootstrap');
+      appendConsoleLine('info', '[Cache] Starting Bootstrap cache (' + BOOTSTRAP_FILES.length + ' files)...');
+
+      try {
+        var cache = await caches.open(CACHE_NAME);
+        for (var i = 0; i < BOOTSTRAP_FILES.length; i++) {
+          var file = BOOTSTRAP_FILES[i];
+          setCacheProgress(i, BOOTSTRAP_FILES.length, file);
+
+          try {
+            var resp = await fetch(file, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            await cache.put(file, resp);
+            appendConsoleLine('log', '[Cache] ✓ ' + file);
+          } catch(e) {
+            addCacheError(file, e.message);
+            appendConsoleLine('error', '[Cache] ✕ ' + file + ': ' + e.message);
+          }
+        }
+        setCacheProgress(BOOTSTRAP_FILES.length, BOOTSTRAP_FILES.length, 'Done.');
+        appendConsoleLine('info', '[Cache] Bootstrap complete. ' + cacheErrors.length + ' error(s).');
+      } catch(e) {
+        appendConsoleLine('error', '[Cache] Bootstrap failed: ' + e.message);
+      }
+
+      setTimeout(function() {
+        hideCacheLoading();
+        document.getElementById('btnCacheBootstrap').disabled = false;
+        refreshCacheStatus();
+      }, 900);
+    }
+
+    /* ═════════════════════════════════════════
+       CACHE MAPS
+    ═════════════════════════════════════════ */
+    async function startCacheMaps() {
+      if (!('caches' in window)) {
+        alert('Cache API not available. Ensure the page is served over HTTPS.');
+        return;
+      }
+      var selected = Array.from(document.querySelectorAll('#mapList input[type="checkbox"]:checked'));
+      if (!selected.length) {
+        alert('Please select at least one map.');
+        return;
+      }
+
+      document.getElementById('btnCacheMaps').disabled = true;
+      showCacheLoading('Caching Maps');
+      appendConsoleLine('info', '[Cache] Starting map cache (' + selected.length + ' maps)...');
+
+      try {
+        var cache = await caches.open(CACHE_NAME);
+        for (var i = 0; i < selected.length; i++) {
+          var cb   = selected[i];
+          var file = cb.dataset.file;
+          var name = cb.dataset.name;
+          setCacheProgress(i, selected.length, file);
+
+          try {
+            var resp = await fetch(file, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            await cache.put(file, resp);
+            appendConsoleLine('log', '[Cache] ✓ ' + name);
+          } catch(e) {
+            addCacheError(file, e.message);
+            appendConsoleLine('error', '[Cache] ✕ ' + name + ': ' + e.message);
+          }
+        }
+        setCacheProgress(selected.length, selected.length, 'Done.');
+        appendConsoleLine('info', '[Cache] Maps complete. ' + cacheErrors.length + ' error(s).');
+      } catch(e) {
+        appendConsoleLine('error', '[Cache] Maps failed: ' + e.message);
+      }
+
+      setTimeout(function() {
+        hideCacheLoading();
+        document.getElementById('btnCacheMaps').disabled = false;
+        refreshCacheStatus();
+      }, 900);
+    }
+
+    /* ═════════════════════════════════════════
+       RESET CACHE
+    ═════════════════════════════════════════ */
+    async function resetCache() {
+      if (!('caches' in window)) {
+        alert('Cache API not available.');
+        return;
+      }
+      if (!confirm('Delete all cached Portal game files from this browser?\n\nThis cannot be undone.')) return;
+
+      try {
+        var deleted = await caches.delete(CACHE_NAME);
+        if (deleted) {
+          appendConsoleLine('warn', '[Cache] All cached files deleted.');
+        } else {
+          appendConsoleLine('info', '[Cache] No cache found to delete.');
+        }
+        refreshCacheStatus();
+      } catch(e) {
+        appendConsoleLine('error', '[Cache] Reset failed: ' + e.message);
+      }
+    }
+
+    /* ─── Init ─── */
+    // Populate cache status on load (after brief delay for SW to settle)
+    setTimeout(refreshCacheStatus, 1200);
+
+  </script>
+
+  <script async type="text/javascript" src="hl2_launcher.js"></script>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"3500493dd7774c0482342282c397ebd6","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
