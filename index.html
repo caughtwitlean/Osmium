@@ -66,7 +66,9 @@
             background: var(--glass); backdrop-filter: blur(35px); border: 1px solid var(--glass-border);
             border-radius: 20px; display: flex; align-items: center; justify-content: space-between;
             padding: 0 30px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        .navbar.scrolled { transform: translateY(-5px); box-shadow: 0 15px 50px rgba(0,0,0,0.5); }
 
         .logo-group { display: flex; flex-direction: column; justify-content: center; line-height: 1.2; }
         .logo { font-size: 1.1rem; letter-spacing: 2px; }
@@ -93,16 +95,19 @@
         .search-bar {
             width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border);
             padding: 10px 15px 10px 40px; border-radius: 14px; color: white; outline: none;
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
-        .fa-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--pink); }
+        .search-bar:focus { background: rgba(255,255,255,0.12); border-color: var(--pink); box-shadow: 0 0 20px rgba(255,0,255,0.2); }
+        .fa-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--pink); z-index: 1; pointer-events: none; }
 
         .search-dropdown {
             position: absolute; top: 55px; left: 0; width: 100%; background: rgba(20, 5, 40, 0.98);
             backdrop-filter: blur(25px); border: 1px solid var(--glass-border); border-radius: 14px;
             max-height: 300px; overflow-y: auto; display: none; z-index: 2000;
         }
-        .search-item { padding: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .search-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
         .search-item:hover { background: rgba(255, 0, 255, 0.1); }
+        .search-item img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
 
         /* --- Layout --- */
         .container { max-width: 1200px; margin: 60px auto; padding: 0 40px; }
@@ -110,18 +115,33 @@
         .page-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .elite-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; }
-        .elite-card { cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
-        .elite-card:hover { transform: scale(1.08); }
+        .elite-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; contain: layout style; }
+        .elite-card { cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; will-change: transform; content-visibility: auto; contain-intrinsic-size: auto 280px; }
+        .elite-card:hover { transform: scale(1.08) translateY(-5px); }
+        .elite-card:active { transform: scale(0.97); }
         .elite-thumb { 
             width: 100%; aspect-ratio: 1/1; background: var(--glass); border: 1px solid var(--glass-border); 
-            border-radius: 28px; margin-bottom: 15px; overflow: hidden;
+            border-radius: 28px; margin-bottom: 15px; overflow: hidden; position: relative;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        .elite-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .elite-card:hover .elite-thumb { border-color: var(--pink); box-shadow: 0 8px 32px rgba(255,0,255,0.2); }
+        .elite-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+        .elite-card:hover .elite-thumb img { transform: scale(1.05); }
+        .game-title { font-size: 0.85rem; font-weight: 700; transition: opacity 0.3s; }
+        .elite-card:hover .game-title { opacity: 0.9; }
+
+        /* Skeleton shimmer */
+        .elite-card-skeleton .elite-thumb {
+            animation: shimmer 1.5s infinite;
+            background: linear-gradient(90deg, var(--glass) 25%, rgba(255,255,255,0.05) 50%, var(--glass) 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
         /* --- Settings --- */
         .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .settings-card { background: var(--glass); border: 1px solid var(--glass-border); padding: 25px; border-radius: 20px; backdrop-filter: blur(10px); }
+        .settings-card { background: var(--glass); border: 1px solid var(--glass-border); padding: 25px; border-radius: 20px; backdrop-filter: blur(10px); transition: transform 0.3s, box-shadow 0.3s; }
+        .settings-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
         .setting-control { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
         .settings-btn { background: var(--elite-gradient); border: none; padding: 10px 20px; border-radius: 12px; color: white; cursor: pointer; font-weight: 700; transition: 0.3s; }
         .settings-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
@@ -299,6 +319,20 @@
             width: 100%;
             max-width: 400px;
         }
+
+        /* --- No results --- */
+        .no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; opacity: 0.7; font-size: 1.2rem; }
+        .no-results i { font-size: 3rem; display: block; margin-bottom: 15px; }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .navbar { flex-wrap: wrap; height: auto; padding: 15px; gap: 10px; }
+            .nav-links { gap: 10px; overflow-x: auto; flex-wrap: nowrap; }
+            .nav-link { font-size: 0.7rem; white-space: nowrap; }
+            .search-container { max-width: 100%; width: 100%; }
+            .elite-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+            .container { padding: 0 15px; margin: 30px auto; }
+        }
     </style>
 </head>
 <body>
@@ -382,7 +416,7 @@
         </div>
     </div>
 
-    <nav class="navbar">
+    <nav class="navbar" id="navbar">
         <div class="logo-group">
             <div class="logo">LOWKEY CHOPPED ELITE</div>
             <div class="logo-subtitle">son who ARE you</div>
@@ -397,7 +431,7 @@
         </div>
         <div class="search-container">
             <i class="fas fa-search"></i>
-            <input type="text" class="search-bar" placeholder="Search..." id="gameSearch" autocomplete="off">
+            <input type="text" class="search-bar" placeholder="Search games & apps..." id="gameSearch" autocomplete="off">
             <div id="searchDropdown" class="search-dropdown"></div>
         </div>
     </nav>
@@ -455,12 +489,16 @@
         </section>
     </div>
 
+    <!-- Catalogs generated from the g and n game collections. They are loaded before the site app. -->
+    <script src="/g/load/gamesData.js"></script>
+    <script src="/n/gamesData.js"></script>
     <script>
         // --- TMDB CONFIGURATION ---
         const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1M2Q0N2VjMzlmZDc4YWFmNGQ0YmNmYTIyYzYwNDAyNSIsIm5iZiI6MTc4Mjc5NjU1MS4wOTEsInN1YiI6IjZhNDM1MTA3MmU3MGQzNmFiNTJkNzliOSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.TysLpuJRCHC8tDmOQyp-ePZD4NGPt_huy7DuSbJfZV4'; 
         
         let currentMediaTab = 'movie';
         let activeShowData = null;
+        let mediaSearchDebounce;
 
         let settings = { particlesEnabled: true, particleCount: 45, panicKey: '`', panicUrl: 'https://classroom.google.com/h' };
 
@@ -469,22 +507,128 @@
             { n: "Geometry Dash", d: "RobTop, webdashers.github.io", i: "/images/gd.png", u: "/games/gd/index.html" },
             { n: "Undertale", d: "Toby Fox, burnedpopcorn", i: "/images/undertale.png", u: "/games/undertale/index.html" },
             { n: "Pizza Tower", d: "McPig, burnedpopcorn", i: "/images/pizzatower.png", u: "/games/pizzatower/index.html" },
-            { n: "Comments", d: "", i: "/images/comments.png", u: "https://padlet.com/theultimateretrogamer1985/comments" },
             { n: "Sonic Mania", d: "Sega, crunch arcade", i: "/images/sonicmania.png", u: "/games/sonicmania/index.html" },
             { n: "Sonic CD", d: "Sega, crunch arcade", i: "/images/soniccd.png", u: "/games/soniccd/index.html" },
             { n: "Celeste", d: "Maddy Makes Games, MercuryWorkshop", i: "/images/celeste.png", u: "/games/celeste/index.html" },
             { n: "Superhot", d: "SUPERHOT Team, breadbb", i: "/images/superhot.png", u: "/games/superhot/index.html" },
             { n: "Deltarune", d: "Toby Fox, bog, mollomm1", i: "/images/deltarune.png", u: "/games/deltarune/index.html" },
-            { n: "Five Nights At Freddys", d: "Scott Cawthon, breadbb, irv77", i: "/images/fnaf1.png", u: "/games/fnaf/1/index.html" },
+            { n: "Five Nights At Freddy's", d: "Scott Cawthon, breadbb, irv77", i: "/images/fnaf1.png", u: "/games/fnaf/1/index.html" },
             { n: "Drive Mad", d: "Martin Magni", i: "/images/drivemad.png", u: "/games/drivemad/index.html" },
+            { n: "Portal", d: "Valve, yourlosingblood", i: "/images/portal.png", u: "/games/portal/index.html" },
             { n: "Brotato", d: "Blobfish, Evil Empire, shxyder", i: "/images/brotato.png", u: "/games/brotato/index.html" },
             { n: "Rocket Goal", d: "Pocket Haven Games", i: "/images/rocketgoal.png", u: "/games/rocketgoal/index.html" },
             { n: "Freddy In Space 2", d: "Scott Cawthon, turg", i: "/images/fis2.png", u: "/games/freddyinspace2/index.html" },
-            { n: "Friday Night Funkin", d: "The Funkin' Crew", i: "/images/fnf.png", u: "/games/fnf/index.html" },
+            { n: "Friday Night Funkin'", d: "The Funkin' Crew", i: "/images/fnf.png", u: "/games/fnf/index.html" },
             { n: "Balatro", d: "LocalThunk, W0W53R", i: "/images/balatro.png", u: "/games/balatro/index.html" },
             { n: "Ragdoll Hit", d: "Ericetto", i: "/images/ragdollhit.png", u: "/games/ragdollhit/index.html" },
             { n: "Ragdoll Archers", d: "Ericetto", i: "/images/ragdollarchers.png", u: "/games/ragdollarchers/index.html" },
-            { n: "Portal", d: "Valve, yourlosingblood", i: "/images/portal.png", u: "/games/portal/index.html" },
+            { n: "Slope", d: "Rob Kay", i: "/g/images/polytrack.png", u: "/n/clslope.html" },
+            { n: "Subway Surfers", d: "Kiloo, SYBO Games", i: "/g/images/subwaysurfers.png", u: "/n/clsubwaysurferslondon.html" },
+            { n: "1v1.LOL", d: "JustPlay.LOL", i: "/g/images/battlewheels.png", u: "/n/cl1v1lol.html" },
+            { n: "Bitlife", d: "Candywriter", i: "/g/images/bitlife.png", u: "/n/clbitlife.html" },
+            { n: "Cookie Clicker", d: "Orteil", i: "/g/images/cookieclicker.png", u: "/n/clcookieclicker.html" },
+            { n: "Run 3", d: "Player 03", i: "/g/images/run3.png", u: "/n/clrun3.html" },
+            { n: "Smash Karts", d: "Tall Team", i: "/g/images/smashkarts.png", u: "/n/clsmashkarts.html" },
+            { n: "Happy Wheels", d: "Total Jerkface", i: "/g/images/happywheels.png", u: "/n/clhappywheels.html" },
+            { n: "Duck Life", d: "Wix Games", i: "/g/images/idlegang.png", u: "/n/clducklife.html" },
+            { n: "Rooftop Snipers", d: "New Eich Games", i: "/g/images/rooftopsnipers.png", u: "/n/clrooftopsnipers.html" },
+            { n: "Basket Random", d: "RHM Interactive", i: "/g/images/basketrandom.png", u: "/n/clbasketrandom.html" },
+            { n: "Boxing Random", d: "RHM Interactive", i: "/g/images/boxingrandom.png", u: "/n/clboxingrandom.html" },
+            { n: "Soccer Random", d: "RHM Interactive", i: "/g/images/soccerrandom.png", u: "/n/clsoccerrandom.html" },
+            { n: "Volley Random", d: "RHM Interactive", i: "/g/images/volleyrandom.png", u: "/n/clvolleyrandom.html" },
+            { n: "Stickman Hook", d: "Madbox", i: "/g/images/stickmanhook.png", u: "/n/clstickmanhook.html" },
+            { n: "Vex 3", d: "Amazing Adam", i: "/g/images/vex3.png", u: "/n/clvex3.html" },
+            { n: "Vex 4", d: "Amazing Adam", i: "/g/images/vex4.png", u: "/n/clvex4.html" },
+            { n: "Vex 5", d: "Amazing Adam", i: "/g/images/vex5.png", u: "/n/clvex5.html" },
+            { n: "Vex 6", d: "Amazing Adam", i: "/g/images/vex6.png", u: "/n/clvex6.html" },
+            { n: "Vex 7", d: "Amazing Adam", i: "/g/images/vex7.png", u: "/n/clvex7.html" },
+            { n: "Vex 8", d: "Amazing Adam", i: "/g/images/vex8.png", u: "/n/clvex8.html" },
+            { n: "Moto X3M", d: "AceViral", i: "/g/images/crazybikes.png", u: "/n/clmotox3mm.html" },
+            { n: "Tunnel Rush", d: "Deer Cat Games", i: "/g/images/tunnelrush2.png", u: "/n/cltunnelrush.html" },
+            { n: "OvO", d: "Dedra", i: "/g/images/ovo.png", u: "/n/clovo.html" },
+            { n: "Idle Breakout", d: "Kodiqi", i: "/g/images/idlebreakout.png", u: "/n/clidlebreakout.html" },
+            { n: "Drift Hunters", d: "Studionum43", i: "/g/images/driftboss.png", u: "/n/cldrifthuntersmerge.html" },
+            { n: "Monkey Mart", d: "TinyDobbins", i: "/g/images/monkeymart.png", u: "/n/clmonkeymart.html" },
+            { n: "Bacon May Die", d: "SnoutUp", i: "/g/images/baconmaydie.png", u: "/n/clbaconmaydie.html" },
+            { n: "Crossy Road", d: "Hipster Whale", i: "/g/images/crossyroad.png", u: "/n/clcrossyroad.html" },
+            { n: "CS:GO Clicker", d: "Clicker", i: "/g/images/csgoclicker.png", u: "/n/clcsgoclicker.html" },
+            { n: "Core Ball", d: "", i: "/g/images/coreball.png", u: "/n/clcoreball.html" },
+            { n: "Dreadhead Parkour", d: "", i: "/g/images/dreadheadparkour.png", u: "/n/cldreadheadparkour.html" },
+            { n: "Ducklings.io", d: "", i: "/g/images/ducklingsio.png", u: "/n/clducklingsio.html" },
+            { n: "Funny Shooter 2", d: "", i: "/g/images/funnyshooter2.png", u: "/n/clfunnyshooter2.html" },
+            { n: "Gobble", d: "FramePop", i: "/g/images/gobble.png", u: "/n/clgobble.html" },
+            { n: "Gold Digger FRVR", d: "FRVR", i: "/g/images/golddiggerfrvr.png", u: "/n/clgolddiggerfrvr.html" },
+            { n: "Iron Snout", d: "SnoutUp", i: "/g/images/ironsnout.png", u: "/n/clironsnout.html" },
+            { n: "JustFall.LOL", d: "JustPlay.LOL", i: "/g/images/justfalllol.png", u: "/n/cljustfalllol.html" },
+            { n: "Level Devil", d: "", i: "/g/images/leveldevil.png", u: "/n/clleveldevil.html" },
+            { n: "Monster Tracks", d: "", i: "/g/images/monstertracks.png", u: "/n/clmonstertracks.html" },
+            { n: "Paper.io 2", d: "Voodoo", i: "/g/images/paperio2.png", u: "/n/clpaperio.html" },
+            { n: "Poor Bunny", d: "", i: "/g/images/poorbunny.png", u: "/n/clpoorbunny.html" },
+            { n: "Push Your Luck", d: "", i: "/g/images/pushyourluck.png", u: "/n/clpushyourluck.html" },
+            { n: "Recoil", d: "", i: "/g/images/recoil.png", u: "/n/clrecoil.html" },
+            { n: "Retro Highway", d: "Gearhead Games", i: "/g/images/retrohighway.png", u: "/n/clretrohighway.html" },
+            { n: "Rocket Soccer Derby", d: "", i: "/g/images/rocketsoccerderby.png", u: "/n/clrocketsoccerderby.html" },
+            { n: "Rooftop Snipers 2", d: "New Eich Games", i: "/g/images/rooftopsnipers2.png", u: "/n/clrooftopsnipers2.html" },
+            { n: "Sausage Flip", d: "Madbox", i: "/g/images/sausageflip.png", u: "/n/clsausageflip.html" },
+            { n: "Sky Riders", d: "", i: "/g/images/skyriders.png", u: "/n/clSkyRiders.html" },
+            { n: "Slow Roads", d: "", i: "/g/images/slowroads.png", u: "/n/clslowroads.html" },
+            { n: "Snow Rider 3D", d: "", i: "/g/images/snowrider3d.png", u: "/n/clsnowrideee.html" },
+            { n: "Table Tennis World Tour", d: "", i: "/g/images/tabletennisworldtour.png", u: "/n/cltabletennisworldtour.html" },
+            { n: "Tag", d: "", i: "/g/images/tag.png", u: "/n/cltag-.html" },
+            { n: "Tanuki Sunset", d: "", i: "/g/images/tanukisunset.png", u: "/n/cltanukisunset.html" },
+            { n: "Time Shooter 2", d: "GoGoMan", i: "/g/images/timeshooter2.png", u: "/n/cltimeshooter2.html" },
+            { n: "Time Shooter 3", d: "GoGoMan", i: "/g/images/timeshooter3.png", u: "/n/cltimeshooter3.html" },
+            { n: "Tiny Fishing", d: "", i: "/g/images/tinyfishing.png", u: "/n/cltinyfishing.html" },
+            { n: "Tomb of the Mask", d: "Playgendary", i: "/g/images/tombofthemask.png", u: "/n/cltombofthemass.html" },
+            { n: "Unicycle Hero", d: "", i: "/g/images/unicyclehero.png", u: "/n/clunicyclehero.html" },
+            { n: "YoHoHo.io", d: "", i: "/g/images/yohohoio.png", u: "/n/clyohohoio.html" },
+            { n: "Zombie Rush", d: "", i: "/g/images/zombierush.png", u: "/n/clzombierush.html" },
+            { n: "Blumgi Rocket", d: "Blumgi", i: "/g/images/blumgirocket.png", u: "/n/clblumgirocket.html" },
+            { n: "Blumgi Racers", d: "Blumgi", i: "/g/images/blumgiracers.png", u: "/n/clblumgiracers.html" },
+            { n: "Choppy Orc", d: "", i: "/g/images/choppyorc.png", u: "/n/clchoppyorc.html" },
+            { n: "Cluster Rush", d: "", i: "/g/images/clusterrush.png", u: "/n/clclusterrush.html" },
+            { n: "Crazy Cars", d: "", i: "/g/images/crazycars.png", u: "/n/clcrazycars.html" },
+            { n: "Crazy Cattle 3D", d: "", i: "/g/images/crazycattle3d.png", u: "/n/clcrazychicken3D.html" },
+            { n: "Gun Spin", d: "", i: "/g/images/gunspin.png", u: "/n/clgun-spin.html" },
+            { n: "BuildNow GG", d: "", i: "/g/images/armedforcesio.png", u: "/n/clbuildnowgg.html" },
+            { n: "Getaway Shootout", d: "New Eich Games", i: "/g/images/fullspeed-racing.jpg", u: "/n/clgetawayshootout.html" },
+            { n: "Stick Merge", d: "", i: "/g/images/stealingthediamond.png", u: "/n/clstickmerge.html" },
+            { n: "Moto X3M Winter", d: "AceViral", i: "/g/images/crazybikes.png", u: "/n/clmotox3mwinter.html" },
+            { n: "Idle Mining Empire", d: "", i: "/g/images/idleminingempire.png", u: "/n/clidleminertycoon.html" },
+            { n: "Stickman Bike", d: "", i: "/g/images/stickmanbike.png", u: "/n/clstickmanbike.html" },
+            { n: "Jacksmith", d: "Flipline Studios", i: "/g/images/jacksmith.png", u: "/n/cljacksmith.html" },
+            { n: "Super Mario 64", d: "Nintendo", i: "/g/images/slope.png", u: "/n/clmario64webgl.html" },
+            { n: "Super Mario World", d: "Nintendo", i: "/g/images/gooberworld.png", u: "/n/clsupermarioworld.html" },
+            { n: "Eaglercraft (Minecraft)", d: "", i: "/g/images/economical.png", u: "/n/clEaglercraftX-188u29.html" },
+            { n: "Tetris", d: "Alexey Pajitnov", i: "/g/images/snowrider3d.png", u: "/n/cltetris.html" },
+            { n: "Slope 3", d: "", i: "/g/images/polytrack.png", u: "/n/clslope3.html" },
+            { n: "Plants vs Zombies", d: "PopCap", i: "/g/images/zombierush.png", u: "/n/clpvz.html" },
+            { n: "FNAF 1", d: "Scott Cawthon", i: "/g/images/fnaf1.png", u: "/n/clFNAF.html" },
+            { n: "Angry Birds", d: "Rovio", i: "/g/images/stack.png", u: "/n/clangrybirds.html" },
+            { n: "Among Us", d: "Innersloth", i: "/g/images/armedforcesio.png", u: "/n/clamongus.html" },
+            { n: "Age of War", d: "", i: "/g/images/5b.png", u: "/n/clageofwar.html" },
+            { n: "Geometry Dash Scratch", d: "griffpatch", i: "/g/images/geometrydash.png", u: "/n/clgeometrydashscratch.html" },
+            { n: "Doodle Jump", d: "Lima Sky", i: "/g/images/jumponly.png", u: "/n/cldoodlejump.html" },
+            { n: "Bloons TD 5", d: "Ninja Kiwi", i: "/g/images/towerdefensemingling.png", u: "/n/clbloonsTD5.html" },
+            { n: "Stick War", d: "", i: "/g/images/animalsvolleyball.png", u: "/n/clstickwar.html" },
+            { n: "Bad Ice Cream", d: "", i: "/g/images/icecream.png", u: "/n/clbadicecream.html" },
+            { n: "Fireboy & Watergirl", d: "Oslo Albet", i: "/g/images/watermelongame.png", u: "/n/clfireboyandwatergirl.html" },
+            { n: "Papa's Pizzeria", d: "Flipline Studios", i: "/g/images/papaspizzeria.png", u: "/n/clpapapizzagood.html" },
+            { n: "Papa's Freezeria", d: "Flipline Studios", i: "/g/images/papasfreezeria.png", u: "/n/clpapasfreezeria.html" },
+            { n: "Super Mario Bros", d: "Nintendo", i: "/g/images/gooberworld.png", u: "/n/clsupermariobros.html" },
+            { n: "Super Smash Flash 2", d: "McLeodGaming", i: "/g/images/cowbay.png", u: "/n/clsupersmashflash2.html" },
+            { n: "Learn to Fly", d: "", i: "/g/images/balldodge.png", u: "/n/cllearntofly.html" },
+            { n: "World's Hardest Game", d: "Snubby Land", i: "/g/images/notnot.png", u: "/n/clworldshardestgame.html" },
+            { n: "Cut the Rope", d: "ZeptoLab", i: "/g/images/zooplop.png", u: "/n/clcuttherope.html" },
+            { n: "Duck Life 4", d: "Wix Games", i: "/g/images/idlegang.png", u: "/n/clducklife4.html" },
+            { n: "Awesome Tanks", d: "", i: "/g/images/awesometanks.png", u: "/n/clawesometanks.html" },
+            { n: "Hole.io", d: "Voodoo", i: "/g/images/yokaidungeon.png", u: "/n/clholeio.html" },
+            { n: "Aquapark.io", d: "Voodoo", i: "/g/images/underwater.png", u: "/n/claquaparkio.html" },
+            { n: "Slither.io", d: "Steve Howse", i: "/g/images/ballz.png", u: "/n/clslitherio.html" },
+            { n: "Bob the Robber", d: "", i: "/g/images/bankrobbery.png", u: "/n/clbobtherobber.html" },
+            { n: "Riddle School 3", d: "JonBro", i: "/g/images/onechance.png", u: "/n/clriddleschool3.html" },
+            { n: "A Small World Cup", d: "RHM Interactive", i: "/g/images/soccerskillsworldcup.png", u: "/n/clasmallworldcup.html" },
+            { n: "Super Mario 63", d: "", i: "/g/images/snowwhite.png", u: "/n/clsm63redux.html" },
         ];
 
         const appList = [
@@ -492,8 +636,71 @@
             { n: "Tiktok (Web Version)", d: "", i: "/images/tiktok.png", u: "/scramjet/embed.html#https://tiktok.com" },
             { n: "RetroArch", d: "", i: "/images/retroarch.png", u: "/apps/retroarch/index.html" },
             { n: "Dreamcast Emulator", d: "Sega, lucidx190", i: "/images/dreamcast.png", u: "/apps/dreamcast/index.html" },
+            { n: "Movies (Osmium)", d: "", i: "/assets/movies.png", u: "/g/load/movies.html" },
+            { n: "Android Emulator", d: "now.gg", i: "/g/images/nowggfun.png", u: "/n/clandroid.html" },
         ];
         
+        // Merge the maintained catalogs with the original featured collection.
+        // Catalog entries use name/iframe/img while the site cards use n/u/i.
+        const catalogPathAliases = {
+            '/g/load/riddleschool/1/index.html': '/g/load/riddleschool/riddleschool1/index.html',
+            '/g/load/riddleschool/2/index.html': '/g/load/riddleschool/riddleschool2/index.html',
+            '/g/load/riddleschool/3/index.html': '/g/load/riddleschool/riddleschool3/index.html',
+            '/g/load/riddleschool/4/index.html': '/g/load/riddleschool/riddleschool4/index.html',
+            '/g/load/riddleschool/5/index.html': '/g/load/riddleschool/riddleschool5/index.html',
+            '/g/load/paperminecraft/index.html': '/g/load/paperminecraft/Paper%20Minecraft%20v11.html',
+            '/g/load/rooftop-sniper-2/index.html': '/g/load/rooftop-snipers-2/index.html',
+            '/g/load/soccer-skills-champions-leauge/index.html': '/g/load/soccer-skills-champions-league/index.html',
+            '/g/load/ks2teams/index.html': '/g/load/ks-2-teams/index.html'
+        };
+
+        const normalizeCatalogPath = (value) => {
+            if (!value || typeof value !== 'string') return '';
+            if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+            const normalized = `/${value.replace(/^\/+/, '')}`;
+            if (catalogPathAliases[normalized]) return catalogPathAliases[normalized];
+            return normalized.replace(/^\/reactive\//, '/scramjet/');
+        };
+
+        const normalizeCatalogEntry = (entry, app = false) => {
+            if (!entry || typeof entry !== 'object') return null;
+            const url = normalizeCatalogPath(entry.u || entry.iframe);
+            if (!url) return null;
+            return {
+                n: String(entry.n || entry.name || entry.identifier || 'Untitled Game'),
+                d: String(entry.d || entry.description || entry.warning || ''),
+                i: normalizeCatalogPath(entry.i || entry.img),
+                u: url,
+                app: Boolean(app || entry.app)
+            };
+        };
+
+        const externalGameCatalog = typeof games !== 'undefined' && Array.isArray(games) ? games : [];
+        const externalNCollection = typeof more !== 'undefined' && Array.isArray(more) ? more : [];
+        // Keep newly added n files visible even before n/gamesData.js is regenerated.
+        const discoveredNEntries = [
+            { name: 'AI', iframe: '/n/clai.html', identifier: 'clai', app: true },
+            { name: 'Geometry Dash Lite', iframe: '/n/geometrydashlite.html', identifier: 'geometrydashlite' },
+            { name: 'Helios Offline', iframe: '/n/Helios-Offline (1).html', identifier: 'Helios-Offline (1)', app: true },
+            { name: 'Helios Offline', iframe: '/n/clHelios-Offline (1).html', identifier: 'clHelios-Offline (1)', app: true },
+            { name: 'Sandstone Proxy', iframe: '/n/clsandstone.html', identifier: 'clsandstone', app: true }
+        ];
+        const catalogByUrl = new Map();
+        [
+            ...gameList.map(entry => normalizeCatalogEntry(entry)),
+            ...appList.map(entry => normalizeCatalogEntry(entry, true)),
+            ...externalGameCatalog.map(entry => normalizeCatalogEntry(entry)),
+            ...externalNCollection.map(entry => normalizeCatalogEntry(entry)),
+            ...discoveredNEntries.map(entry => normalizeCatalogEntry(entry))
+        ].filter(Boolean).forEach(entry => {
+            // Keeping the first entry preserves the hand-curated featured cards.
+            if (!catalogByUrl.has(entry.u)) catalogByUrl.set(entry.u, entry);
+        });
+
+        const siteCatalog = [...catalogByUrl.values()];
+        const siteGameList = siteCatalog.filter(entry => !entry.app);
+        const siteAppList = siteCatalog.filter(entry => entry.app);
+
         const teamList = [
             { n: "turg", r: "da creator", i: "/images/turg.png" },
             { n: "sharwie", r: "co creator (gives me game/site ideas)", i: "/images/sharwie.png" },
@@ -508,22 +715,59 @@
             { n: "Drift", r: "Sound Designer", i: "/images/drift.png" }
         ];
 
+        // --- Intersection Observer for lazy loading ---
+        const placeholderFor = (title) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="#1a0035"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ff00ff" font-family="Arial" font-size="24">${String(title || 'Elite').slice(0, 24)}</text></svg>`)}`;
+        const lazyObserver = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const card = entry.target;
+                const img = card.querySelector('img[data-src]');
+                card.classList.remove('elite-card-skeleton');
+                if (img) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                }
+                lazyObserver.unobserve(card);
+            });
+        }, { rootMargin: '300px 0px' }) : null;
+
+        function buildCard(g) {
+            const card = document.createElement('div');
+            const thumb = document.createElement('div');
+            const img = document.createElement('img');
+            const title = document.createElement('div');
+            const placeholder = placeholderFor(g.n);
+
+            card.className = 'elite-card elite-card-skeleton';
+            card.onclick = () => openGame(g.u, g.n, g.i || placeholder, g.d || '');
+            thumb.className = 'elite-thumb';
+            img.src = placeholder;
+            img.alt = g.n;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            if (g.i) img.dataset.src = g.i;
+            img.addEventListener('error', () => {
+                img.removeAttribute('data-src');
+                img.onerror = null;
+                img.src = placeholder;
+            });
+            title.className = 'game-title';
+            title.textContent = g.n;
+            thumb.appendChild(img);
+            card.append(thumb, title);
+
+            if (lazyObserver && g.i) lazyObserver.observe(card);
+            else card.classList.remove('elite-card-skeleton');
+            return card;
+        }
+
         function initElite() {
             const gameGrid = document.getElementById('gameGrid');
             const appGrid = document.getElementById('appGrid');
             const creds = document.getElementById('creditsGrid');
-
-            const buildCards = (list) => list.map(g => `
-                <div class="elite-card" onclick="openGame('${g.u}', '${g.n}', '${g.i}', '${g.d || ''}')">
-                    <div class="elite-thumb"><img src="${g.i}" onerror="this.src='https://via.placeholder.com/200?text=Elite'"></div>
-                    <div class="game-title">${g.n}</div>
-                </div>
-            `).join('');
-
-            if(gameGrid) gameGrid.innerHTML = buildCards(gameList);
-            if(appGrid) appGrid.innerHTML = buildCards(appList);
-            if(creds) creds.innerHTML = teamList.map(t => `<div class="elite-card"><div class="elite-thumb"><img src="${t.i}"></div><div class="credit-name">${t.n}</div><div class="credit-role" style="font-size: 0.7rem; opacity: 0.8; -webkit-text-fill-color: white;">${t.r}</div></div>`).join('');
-            
+            if (gameGrid) { gameGrid.innerHTML = ''; siteGameList.forEach(g => gameGrid.appendChild(buildCard(g))); }
+            if (appGrid) { appGrid.innerHTML = ''; siteAppList.forEach(g => appGrid.appendChild(buildCard(g))); }
+            if (creds) creds.innerHTML = teamList.map(t => `<div class="elite-card"><div class="elite-thumb"><img src="${t.i}" loading="lazy" decoding="async"></div><div class="credit-name">${t.n}</div><div class="credit-role" style="font-size: 0.7rem; opacity: 0.8; -webkit-text-fill-color: white;">${t.r}</div></div>`).join('');
             fetchTrendingMedia();
         }
 
@@ -553,6 +797,8 @@
         }
 
         async function onMediaSearch() {
+            clearTimeout(mediaSearchDebounce);
+            mediaSearchDebounce = setTimeout(async () => {
             const query = document.getElementById('mediaSearch').value.trim();
             if (!query) {
                 fetchTrendingMedia();
@@ -562,6 +808,7 @@
             if (data && data.results) {
                 renderMediaItems(data.results);
             }
+            }, 400);
         }
 
         function switchMediaTab(tab) {
@@ -584,14 +831,14 @@
                     const embedUrl = `https://vidking.net/embed/movie/${m.id}`;
                     return `
                         <div class="elite-card" onclick="openGame('${embedUrl}', '${title.replace(/'/g, "\\'")}', '${posterPath}', '')">
-                            <div class="movie-thumb"><img src="${posterPath}"></div>
+                            <div class="movie-thumb"><img src="${posterPath}" loading="lazy" decoding="async"></div>
                             <div class="game-title">${title}</div>
                         </div>
                     `;
                 } else {
                     return `
                         <div class="elite-card" onclick="openTVShow('${m.id}', '${title.replace(/'/g, "\\'")}', '${posterPath}')">
-                            <div class="movie-thumb"><img src="${posterPath}"></div>
+                            <div class="movie-thumb"><img src="${posterPath}" loading="lazy" decoding="async"></div>
                             <div class="game-title">${title}</div>
                         </div>
                     `;
@@ -908,25 +1155,52 @@
             activeCalls = {}; dataConns = {}; peer = null;
         }
 
-        /* --- STARFIELD & SEARCH --- */
+        /* --- ENHANCED SEARCH WITH DEBOUNCE --- */
         const searchInput = document.getElementById('gameSearch');
         const dropdown = document.getElementById('searchDropdown');
+        let searchDebounce;
         searchInput.addEventListener('input', () => {
-            const val = searchInput.value.toLowerCase();
-            dropdown.innerHTML = "";
-            if (val.length < 1) { dropdown.style.display = 'none'; return; }
-            const allItems = [...gameList, ...appList];
-            const filtered = allItems.filter(item => item.n.toLowerCase().includes(val));
-            if (filtered.length > 0) {
-                dropdown.style.display = 'block';
-                filtered.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'search-item';
-                    div.innerHTML = `<span>${item.n}</span>`;
-                    div.onclick = () => { openGame(item.u, item.n, item.i, item.d || ''); dropdown.style.display='none'; };
-                    dropdown.appendChild(div);
-                });
-            } else { dropdown.style.display = 'none'; }
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                const val = searchInput.value.toLowerCase().trim();
+                dropdown.innerHTML = "";
+                if (!val) { dropdown.style.display = 'none'; return; }
+                const allItems = [...siteGameList, ...siteAppList];
+                const filtered = allItems.filter(item => item.n.toLowerCase().includes(val));
+                if (filtered.length) {
+                    dropdown.style.display = 'block';
+                    filtered.slice(0, 15).forEach(item => {
+                        const div = document.createElement('div'); div.className = 'search-item';
+                        div.innerHTML = `<img src="${item.i}" onerror="this.style.display='none'" style="width:32px;height:32px;border-radius:6px;object-fit:cover;"><span>${item.n}</span>`;
+                        div.onclick = () => { openGame(item.u, item.n, item.i, item.d||''); dropdown.style.display='none'; searchInput.value=''; };
+                        dropdown.appendChild(div);
+                    });
+                    if (filtered.length > 15) { const more = document.createElement('div'); more.className='search-item'; more.style.opacity='0.5'; more.innerHTML=`<span>+ ${filtered.length-15} more...</span>`; dropdown.appendChild(more); }
+                } else { dropdown.style.display = 'none'; }
+            }, 250);
+        });
+        document.addEventListener('click', (e) => { if (!e.target.closest('.search-container')) dropdown.style.display = 'none'; });
+
+        // Live filter on games/apps page
+        let filterDebounce;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(filterDebounce);
+            filterDebounce = setTimeout(() => {
+                const val = searchInput.value.toLowerCase().trim();
+                const activeSection = document.querySelector('.page-section.active');
+                if (activeSection && activeSection.id === 'games') {
+                    const cards = document.querySelectorAll('#gameGrid .elite-card');
+                    let vc = 0;
+                    siteGameList.forEach((g, i) => { const m = !val || g.n.toLowerCase().includes(val); if (cards[i]) { cards[i].style.display = m ? '' : 'none'; if (m) vc++; } });
+                    let nr = document.getElementById('noResultsMsg');
+                    if (!vc && val) { if (!nr) { nr = document.createElement('div'); nr.id='noResultsMsg'; nr.className='no-results'; nr.innerHTML='<i class="fas fa-search"></i>No games found'; document.getElementById('gameGrid').appendChild(nr); } nr.style.display='block'; }
+                    else if (nr) nr.style.display='none';
+                }
+                if (activeSection && activeSection.id === 'apps') {
+                    const cards = document.querySelectorAll('#appGrid .elite-card');
+                    siteAppList.forEach((g, i) => { const m = !val || g.n.toLowerCase().includes(val); if (cards[i]) cards[i].style.display = m ? '' : 'none'; });
+                }
+            }, 150);
         });
 
         const canvas = document.getElementById('star-canvas');
@@ -946,6 +1220,9 @@
         function animate() { ctx.clearRect(0,0,canvas.width, canvas.height); stars.forEach(s => { s.update(); s.draw(); }); requestAnimationFrame(animate); }
         window.onresize = initStars;
         initStars(); animate(); initElite();
+
+        // --- Navbar scroll effect ---
+        window.addEventListener('scroll', () => { document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50); }, { passive: true });
     </script>
 </body>
 </html>
