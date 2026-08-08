@@ -3,8 +3,8 @@
 // =====================================================
 const DEFAULT_WISP = "wss://anura.pro/";
 const WISP_SERVERS = [
-    { name: "Rhw's Wisp", url: "wss://wisp.rhw.one/wisp/" }, //note that this also works with uv static and sj static
-    { name: "Anura's Wisp", url: "wss://anura.pro/" }
+    { name: "Anura's Wisp", url: "wss://anura.pro/" },
+    { name: "Rhw's Wisp", url: "wss://wisp.rhw.one/wisp/" } //note that this also works with uv static and sj static
 ];
 
 if (!localStorage.getItem("proxServer")) {

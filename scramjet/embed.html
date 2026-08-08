@@ -173,6 +173,49 @@
             iframeContainer.classList.add('loaded');
         }
 
+        // WISP servers used for automatic failover (fastest reachable one wins)
+        const WISP_SERVERS = [
+            { name: "Anura's Wisp", url: "wss://anura.pro/" },
+            { name: "GoIP Wisp", url: "wss://dash.goip.de/wisp/" },
+            { name: "Rhw's Wisp", url: "wss://wisp.rhw.one/wisp/" }
+        ];
+
+        // Probes WISP servers and resolves with the first one that connects.
+        // A saved server is tried first, then the known-good list, so a dead
+        // server never blocks the game from loading for more than ~2.5s.
+        function pickBestWisp() {
+            return new Promise((resolve) => {
+                let saved = null;
+                try { saved = localStorage.getItem('proxServer'); } catch (_e) {}
+                const candidates = [];
+                if (saved && /^wss?:\/\//.test(saved)) candidates.push(saved);
+                WISP_SERVERS.forEach(s => { if (s.url !== saved) candidates.push(s.url); });
+
+                const fallback = saved || WISP_SERVERS[0].url;
+                let idx = 0;
+                let settled = false;
+                const totalTimer = setTimeout(() => { settled = true; resolve(fallback); }, 4500);
+
+                function tryNext() {
+                    if (settled) return;
+                    if (idx >= candidates.length) { clearTimeout(totalTimer); settled = true; resolve(fallback); return; }
+                    const url = candidates[idx++];
+                    let ws;
+                    try { ws = new WebSocket(url); } catch (_e) { tryNext(); return; }
+                    const t = setTimeout(() => { try { ws.close(); } catch (_e) {} tryNext(); }, 2500);
+                    ws.onopen = () => {
+                        if (settled) return;
+                        clearTimeout(t); clearTimeout(totalTimer); settled = true;
+                        try { ws.close(); } catch (_e) {}
+                        try { localStorage.setItem('proxServer', url); } catch (_e) {}
+                        resolve(url);
+                    };
+                    ws.onerror = () => { clearTimeout(t); try { ws.close(); } catch (_e) {} tryNext(); };
+                }
+                tryNext();
+            });
+        }
+
         async function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const shouldSkip = urlParams.has('skip');
@@ -249,7 +292,7 @@
                         throw new Error("Service Worker registration failed");
                     }
 
-                    const wispUrl = localStorage.getItem('proxServer') || 'wss://wisp.rhw.one/wisp/';
+                    const wispUrl = await pickBestWisp();
 
                     // Wait for SW ready with timeout
                     const swReadyPromise = navigator.serviceWorker.ready;
@@ -310,6 +353,9 @@
 
                     const frame = scramjet.createFrame();
                     frame.frame.id = 'embed-frame';
+                    // Allow the proxied app to use everything it needs (fullscreen, pointer lock, gamepad, media, etc.)
+                    frame.frame.setAttribute('allow', 'fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; gamepad; pointer-lock; accelerometer; gyroscope; magnetometer; microphone; camera; display-capture; xr-spatial-tracking; payment');
+                    frame.frame.setAttribute('allowfullscreen', '');
 
                     if (!shouldSkip) {
                         skipButtonTimeout = setTimeout(() => { skipBtn.style.display = 'inline-block'; }, 1500);
@@ -335,6 +381,18 @@
                                 showError(`Timeout: Content took too long to load. Try refreshing or switch proxy servers.`);
                             }
                         }, 60000);
+                    } else {
+                        // Even in skip mode, never leave the user staring at a blank frame.
+                        // If the top document hasn't loaded within 30s, show the error screen.
+                        loadingTimeout = setTimeout(() => {
+                            try {
+                                const win = frame.frame.contentWindow;
+                                const href = win && win.location ? win.location.href : '';
+                                if (!win || href === 'about:blank' || href === '') {
+                                    showError(`Content took too long to load. Try refreshing or switch proxy servers.`);
+                                }
+                            } catch (_e) { /* frame navigated cross-origin = it's loading, leave it alone */ }
+                        }, 30000);
                     }
 
                     iframeContainer.appendChild(frame.frame);
