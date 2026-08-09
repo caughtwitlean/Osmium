@@ -12,11 +12,11 @@ echo.
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [+] Using Python HTTP server
-    echo   [+] Open http://localhost:8080 in your browser
+    echo   [+] Open http://localhost:5000 in your browser
     echo   [+] Press Ctrl+C to stop
     echo.
-    start "" http://localhost:8080
-    python -m http.server 8080
+    start "" http://localhost:5000
+    python -m http.server 5000
     goto :end
 )
 
@@ -24,11 +24,11 @@ if %errorlevel% equ 0 (
 python3 --version >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [+] Using Python3 HTTP server
-    echo   [+] Open http://localhost:8080 in your browser
+    echo   [+] Open http://localhost:5000 in your browser
     echo   [+] Press Ctrl+C to stop
     echo.
-    start "" http://localhost:8080
-    python3 -m http.server 8080
+    start "" http://localhost:5000
+    python3 -m http.server 5000
     goto :end
 )
 
@@ -36,11 +36,11 @@ if %errorlevel% equ 0 (
 npx --version >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [+] Using npx http-server
-    echo   [+] Open http://localhost:8080 in your browser
+    echo   [+] Open http://localhost:5000 in your browser
     echo   [+] Press Ctrl+C to stop
     echo.
-    start "" http://localhost:8080
-    npx http-server . -p 8080 -c-1
+    start "" http://localhost:5000
+    npx http-server . -p 5000 -c-1
     goto :end
 )
 
