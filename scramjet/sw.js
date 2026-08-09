@@ -50,7 +50,7 @@ self.addEventListener("message", ({ data }) => {
 setTimeout(() => {
     if (!wispConfig.wispurl && resolveConfigReady) {
         console.warn("SW: Config timeout, using default Wisp");
-        wispConfig.wispurl = "wss://anura.pro/";
+        wispConfig.wispurl = "wss://lwkchpbeta.oversizedpoolfloatie.store/wisp";
         resolveConfigReady();
         resolveConfigReady = null;
     }

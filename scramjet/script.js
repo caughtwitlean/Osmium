@@ -1,11 +1,16 @@
 // =====================================================
 // CONFIGURATION
 // =====================================================
-const DEFAULT_WISP = "wss://anura.pro/";
+const DEFAULT_WISP = "wss://lwkchpbeta.oversizedpoolfloatie.store/wisp";
 const WISP_SERVERS = [
-    { name: "Anura's Wisp", url: "wss://anura.pro/" },
-    { name: "Rhw's Wisp", url: "wss://wisp.rhw.one/wisp/" } //note that this also works with uv static and sj static
+    { name: "Lowkey Wisp", url: "wss://lwkchpbeta.oversizedpoolfloatie.store/wisp" } // works with uv static and sj static too
 ];
+
+// Migrate any previously saved Wisp selection to Lowkey's Wisp
+const prev = localStorage.getItem("proxServer");
+if (prev === "wss://anura.pro/" || prev === "wss://wisp.rhw.one/wisp/") {
+    localStorage.setItem("proxServer", DEFAULT_WISP);
+}
 
 if (!localStorage.getItem("proxServer")) {
     localStorage.setItem("proxServer", DEFAULT_WISP);

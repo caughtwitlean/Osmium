@@ -6,6 +6,7 @@
     <title>Lowkey Chopped Elite</title>
     <link rel="icon" type="image/x-icon" href="https://www.image2url.com/r2/default/images/1777510945877-75a74058-862e-442c-85db-cd2c07bfcc44.png">
     <meta name="description" content="An unblocked games site with a Scramjet proxy!">
+    <meta name="theme-color" content="#090610">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -24,6 +25,7 @@
            ================================================================ */
 
         :root {
+            color-scheme: dark;
             --bg: #120808;
             --bg-alt: #180b0b;
             --surface: #200e0e;
@@ -53,7 +55,7 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 
         body {
             font-family: var(--font);
@@ -86,6 +88,12 @@
 
         ::selection { background: var(--accent-soft); color: var(--text); }
 
+        /* accessible focus rings */
+        :where(a, button, select, input, textarea, [tabindex]):focus-visible {
+            outline: 2px solid var(--accent-bright);
+            outline-offset: 2px;
+        }
+
         /* --- scrollbars (clean, always visible) --- */
         ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -93,12 +101,12 @@
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.35); }
         * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; }
 
-        /* shared search bar (settings, movie search, etc.) */
+        /* shared search bar (settings, search overlay, etc.) */
         .search-bar {
             width: 100%; height: 43px; padding: 0 42px 0 16px;
             background: var(--surface); border: 1px solid var(--border);
             border-radius: 999px; color: var(--text); font-family: var(--font);
-            font-size: .83rem; outline: none;
+            font-size: .83rem; outline: none; caret-color: var(--accent-bright);
             transition: border-color .25s, box-shadow .25s, background .25s;
         }
         .search-bar::placeholder { color: var(--text-dim); }
@@ -106,6 +114,7 @@
             border-color: var(--accent); background: var(--surface-2);
             box-shadow: 0 0 0 4px var(--accent-soft), 0 0 26px var(--accent-glow);
         }
+        .search-bar:focus-visible { outline: none; } /* box-shadow ring already indicates focus */
         /* search overlay (triggered from rail) */
         .search-overlay {
             position: fixed; inset: 0; z-index: 2800; display: none; opacity: 0;
@@ -143,9 +152,9 @@
         .search-item {
             padding: 11px 18px; display: flex; align-items: center; gap: 12px;
             cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.04);
-            font-size: .84rem; transition: background .2s;
+            font-size: .84rem; transition: background .2s, transform .2s;
         }
-        .search-item:hover { background: var(--accent-soft); }
+        .search-item:hover { background: var(--accent-soft); transform: translateX(3px); }
         .search-item img { width: 36px; height: 36px; border-radius: 9px; object-fit: cover; }
         .search-item .item-title { font-weight: 600; }
         .search-item .item-sub { font-size: .7rem; color: var(--text-muted); margin-left: auto; }
@@ -153,29 +162,44 @@
         /* ============ QUICK RAIL (truffled-style — simple icon dock) ============ */
         .nav-rail {
             position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 14px; z-index: 950;
-            padding: 10px 6px;
+            display: flex; flex-direction: column; gap: 12px; z-index: 950;
+            padding: 8px 5px;
         }
         .rail-btn {
-            width: 56px; height: 56px; border-radius: 14px;
+            width: 48px; height: 48px; border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            color: var(--text-muted); font-size: 1.2rem; cursor: pointer; text-decoration: none;
+            color: var(--text-muted); font-size: 1.02rem; cursor: pointer; text-decoration: none;
             transition: all .22s; position: relative; background: transparent;
         }
-        .rail-btn:hover { color: var(--text); transform: scale(1.10); }
+        .rail-btn:hover { color: var(--text); background: rgba(255,255,255,.06); transform: scale(1.08); }
+        .rail-btn:active { transform: scale(.94); }
         .rail-btn.active {
             color: var(--accent-bright);
+            background: var(--accent-soft);
+            box-shadow: 0 0 0 1px var(--accent-glow), 0 4px 16px rgba(0,0,0,.3);
             text-shadow: 0 0 18px var(--accent-glow);
         }
+        /* tooltip bubble */
         .rail-btn::after {
             content: attr(title);
-            position: absolute; right: calc(100% + 16px); top: 50%; transform: translateY(-50%) translateX(6px);
-            background: var(--surface-2); border: 1px solid var(--border);
+            position: absolute; right: calc(100% + 14px); top: 50%; transform: translateY(-50%) translateX(6px);
+            background: var(--surface-2); border: 1px solid var(--border-light);
             color: var(--text); font-size: .66rem; font-weight: 500; letter-spacing: .4px;
-            padding: 6px 10px; border-radius: 6px; white-space: nowrap; font-family: var(--font); font-size: .7rem;
+            padding: 5px 9px; border-radius: 7px; white-space: nowrap; font-family: var(--font);
+            box-shadow: 0 6px 18px rgba(0,0,0,.4);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
             opacity: 0; pointer-events: none; transition: all .2s;
         }
         .rail-btn:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+        /* tooltip arrow */
+        .rail-btn::before {
+            content: ''; position: absolute; right: calc(100% + 10px); top: 50%;
+            width: 8px; height: 8px; background: var(--surface-2);
+            border-top: 1px solid var(--border-light); border-right: 1px solid var(--border-light);
+            transform: translateY(-50%) rotate(45deg) scale(0);
+            opacity: 0; transition: all .2s;
+        }
+        .rail-btn:hover::before { opacity: 1; transform: translateY(-50%) rotate(45deg) scale(1); }
 
         /* ============ LAYOUT ============ */
         .container {
@@ -186,14 +210,6 @@
         .page-section.active { display: block; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
-        .section-head { margin: 14px 0 22px; display: flex; align-items: center; gap: 12px; }
-        .section-head::before { content: ''; flex: 1; height: 1px; background: linear-gradient(270deg, var(--border), transparent); }
-        .section-head::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
-        .section-title {
-            font-size: 1.15rem; font-weight: 700; letter-spacing: 1px;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .section-title i { color: var(--accent-bright); }
 
         /* ============ GAME GRID ============ */
         .elite-grid {
@@ -214,8 +230,8 @@
             transition: border-color .3s, box-shadow .3s;
         }
         .elite-card:hover .elite-thumb {
-            border-color: var(--border-light);
-            box-shadow: 0 6px 18px rgba(0,0,0,.25), 0 0 0 1px var(--accent-soft);
+            border-color: var(--accent);
+            box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 0 1px var(--accent-soft), 0 0 36px var(--accent-glow);
         }
         .elite-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
         .elite-card:hover .elite-thumb img { transform: scale(1.07); }
@@ -223,14 +239,15 @@
         .elite-grid:not(#creditsGrid) .elite-thumb::after {
             content: '\f144'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-            font-size: 2.2rem; color: var(--text); background: rgba(0,0,0,.35);
+            font-size: 2.1rem; color: var(--text);
+            background: radial-gradient(circle, rgba(0,0,0,.15) 0%, rgba(0,0,0,.55) 100%);
             opacity: 0; transition: opacity .3s;
             text-shadow: 0 2px 20px rgba(0,0,0,.6);
         }
         .elite-grid:not(#creditsGrid) .elite-card:hover .elite-thumb::after { opacity: 1; }
         #creditsGrid .elite-thumb::after { display: none; }
         .game-title { font-size: .8rem; font-weight: 600; color: var(--text); letter-spacing: .3px; line-height: 1.35; }
-        .elite-card:hover .game-title { color: var(--accent-bright); }
+        .elite-card:hover .game-title { color: var(--accent-bright); text-shadow: 0 0 14px var(--accent-soft); }
 
         .elite-card-skeleton .elite-thumb {
             animation: shimmer 1.6s infinite;
@@ -241,32 +258,6 @@
 
         .credit-name { font-size: .85rem; font-weight: 700; margin-top: 10px; }
         .credit-role { font-size: .68rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; }
-
-        /* ============ MOVIES ============ */
-        .media-utility-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; flex-wrap: wrap; gap: 14px; }
-        .media-tabs { display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 5px; border-radius: 999px; }
-        .media-tab-btn {
-            background: transparent; border: none; color: var(--text-muted); cursor: pointer;
-            font-family: var(--font); font-size: .8rem; font-weight: 600; letter-spacing: .5px;
-            padding: 9px 20px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
-            transition: all .25s;
-        }
-        .media-tab-btn.active, .media-tab-btn:hover {
-            background: var(--grad); color: #fff;
-            box-shadow: 0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.2);
-        }
-        .media-search-wrapper { position: relative; width: 100%; max-width: 340px; }
-        .media-search-wrapper > .fa-search { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--accent-bright); z-index: 1; pointer-events: none; font-size: .85rem; }
-        .media-search-wrapper .search-bar { padding-left: 44px; }
-
-        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 24px; }
-        .movie-thumb {
-            width: 100%; aspect-ratio: 2/3;
-            background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-            margin-bottom: 11px; overflow: hidden; transition: all .3s;
-        }
-        .movie-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .elite-card:hover .movie-thumb { border-color: var(--accent); box-shadow: 0 14px 38px var(--accent-soft); }
 
         /* ============ PLAYER OVERLAY ============ */
         .game-overlay {
@@ -291,6 +282,7 @@
             height: 64px; display: flex; align-items: center; justify-content: space-between;
             padding: 0 20px; background: var(--surface-2);
             border-bottom: 1px solid var(--border);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 6px 24px rgba(0,0,0,.25);
         }
         .game-header-info { display: flex; align-items: center; gap: 14px; min-width: 0; }
         .game-header-icon {
@@ -308,15 +300,11 @@
             font-family: var(--font); font-size: .76rem; font-weight: 600; letter-spacing: .4px;
             transition: all .25s;
         }
-        .action-btn:hover { background: var(--surface-3); border-color: var(--border-light); transform: translateY(-2px); }
+        .action-btn:hover { background: var(--surface-3); border-color: var(--border-light); transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0,0,0,.3); }
+        .action-btn:active { transform: translateY(0) scale(.96); box-shadow: none; }
         .action-btn i { font-size: .85rem; }
         .exit-btn:hover { background: var(--danger); border-color: var(--danger); color: #fff; box-shadow: 0 6px 22px var(--accent-glow); }
 
-        .show-controls-bar {
-            display: flex; gap: 12px; align-items: center; padding: 10px 20px;
-            background: var(--surface); border-bottom: 1px solid var(--border);
-            font-size: .8rem; color: var(--text-muted); font-weight: 600;
-        }
         .show-select {
             background: var(--surface); border: 1px solid var(--border); color: var(--text);
             padding: 8px 14px; border-radius: 9px; font-family: var(--font); font-size: .8rem;
@@ -418,7 +406,7 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,.05), var(--shadow-sm);
             transition: transform .3s, border-color .3s, box-shadow .3s;
         }
-        .settings-card:hover { transform: translateY(-4px); border-color: var(--border-light); box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+        .settings-card:hover, .settings-card:focus-within { transform: translateY(-4px); border-color: var(--border-light); box-shadow: 0 14px 40px rgba(0,0,0,.4); }
         .settings-card h3 { font-size: .95rem; display: flex; align-items: center; gap: 10px; }
         .settings-card h3 i { color: var(--accent-bright); }
         .settings-card p { color: var(--text-muted); font-size: .78rem; line-height: 1.5; }
@@ -433,6 +421,7 @@
             transition: transform .25s, filter .25s, box-shadow .25s;
         }
         .settings-btn:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.1); }
+        .settings-btn:active { transform: translateY(0) scale(.97); }
 
         .settings-card input[type="range"] {
             width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px;
@@ -495,10 +484,6 @@
             font-size: .73rem; color: var(--text-dim); font-style: italic;
             margin-bottom: 20px; text-align: center;
         }
-
-        /* ============ MISC ============ */
-        .no-results { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 1.05rem; }
-        .no-results i { font-size: 3rem; display: block; margin-bottom: 15px; color: var(--accent); }
 
         /* ============ THEME SYSTEM ============ */
         body[data-theme="crimson"] {}
@@ -661,7 +646,7 @@
         /* ============ RESPONSIVE ============ */
         @media (max-width: 900px) {
             .nav-rail { right: 4px; gap: 8px; }
-            .rail-btn { width: 38px; height: 38px; font-size: .9rem; }
+            .rail-btn { width: 32px; height: 32px; font-size: .78rem; border-radius: 10px; }
             .container { padding: 14px 16px 50px; }
             .search-panel { max-width: 94vw; }
             .elite-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
@@ -670,15 +655,14 @@
             .settings-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 500px) {
-            .nav-rail { right: 2px; gap: 6px; }
-            .rail-btn { width: 34px; height: 34px; font-size: .8rem; border-radius: 10px; }
+            .nav-rail { right: 2px; gap: 5px; }
+            .rail-btn { width: 28px; height: 28px; font-size: .68rem; border-radius: 8px; }
             .container { padding: 8px 6px 30px; }
             .search-overlay { padding-top: 8vh; }
             .search-panel { max-width: 96vw; border-radius: 16px; }
             .elite-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
             .elite-thumb { border-radius: 14px; }
             .game-title { font-size: .72rem; }
-            .movie-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
         }
     </style>
 </head>
@@ -705,12 +689,6 @@
                     <button class="action-btn" onclick="toggleFullscreen()" title="Fullscreen"><i class="fas fa-expand"></i><span>Fullscreen</span></button>
                     <button class="action-btn exit-btn" onclick="closeGame()" title="Exit"><i class="fas fa-xmark"></i><span>Exit</span></button>
                 </div>
-            </div>
-            <div class="show-controls-bar" id="showControlsBar" style="display: none;">
-                <label for="seasonSelect">Season:</label>
-                <select id="seasonSelect" class="show-select" onchange="onSeasonChange()"></select>
-                <label for="episodeSelect">Episode:</label>
-                <select id="episodeSelect" class="show-select" onchange="onEpisodeChange()"></select>
             </div>
             <div class="game-main-content">
                 <div class="game-frame-body">
@@ -741,7 +719,6 @@
         <a class="rail-btn" onclick="openSearchOverlay()" title="Search"><i class="fas fa-search"></i></a>
         <a class="rail-btn active" data-page="games" onclick="showPage('games', this)" title="Games"><i class="fas fa-gamepad"></i></a>
         <a class="rail-btn" data-page="apps" onclick="showPage('apps', this)" title="Apps"><i class="fas fa-cubes"></i></a>
-        <a class="rail-btn" data-page="movies" onclick="showPage('movies', this)" title="Movies & TV"><i class="fas fa-film"></i></a>
         <a class="rail-btn" data-page="proxy" onclick="showPage('proxy', this)" title="Proxy"><i class="fas fa-globe"></i></a>
         <a class="rail-btn" data-page="credits" onclick="showPage('credits', this)" title="Credits"><i class="fas fa-star"></i></a>
         <a class="rail-btn" data-page="legal" onclick="showPage('legal', this)" title="Legal"><i class="fas fa-scale-balanced"></i></a>
@@ -751,46 +728,22 @@
     <main class="container">
         <!-- ===== GAMES ===== -->
         <section id="games" class="page-section active">
-            <div class="section-head">
-                <h2 class="section-title"><i class="fas fa-gamepad"></i> lowkey chopped <span style="color:var(--accent-bright);text-shadow:0 0 10px var(--accent-glow),0 0 30px var(--accent-glow),0 0 60px var(--accent-soft)">elite</span></h2>
-            </div>
             <div class="elite-grid" id="gameGrid"></div>
         </section>
 
         <!-- ===== APPS ===== -->
         <section id="apps" class="page-section">
-            <div class="section-head">
-                <h2 class="section-title"><i class="fas fa-cubes"></i> Apps</h2>
-            </div>
             <div class="elite-grid" id="appGrid"></div>
-        </section>
-
-        <!-- ===== MOVIES ===== -->
-        <section id="movies" class="page-section">
-            <div class="media-utility-bar">
-                <div class="media-tabs">
-                    <button class="media-tab-btn active" id="tab-movie" onclick="switchMediaTab('movie')"><i class="fas fa-film"></i> Movies</button>
-                    <button class="media-tab-btn" id="tab-tv" onclick="switchMediaTab('tv')"><i class="fas fa-tv"></i> TV Shows</button>
-                </div>
-                <div class="media-search-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" class="search-bar" placeholder="Search title..." id="mediaSearch" oninput="onMediaSearch()" autocomplete="off">
-                </div>
-            </div>
-            <div class="movie-grid" id="movieGrid"></div>
-            <p style="text-align:center;margin-top:20px;font-size:.72rem;color:var(--text-dim);">Movies & TV metadata provided by <a href="https://www.themoviedb.org/" target="_blank" style="color:var(--accent-bright);text-decoration:none;">TMDB</a>. This site does not host any video content — all streams are served by third-party providers. For copyright concerns, see our <a href="javascript:void(0)" onclick="showPage('legal',document.querySelector('[data-page=legal]'))" style="color:var(--accent-bright);text-decoration:none;">Legal</a> page.</p>
         </section>
 
         <!-- ===== CREDITS ===== -->
         <section id="credits" class="page-section">
-            <div class="section-head"><h2 class="section-title"><i class="fas fa-heart"></i> Credits</h2></div>
             <div class="elite-grid" id="creditsGrid"></div>
             <p style="text-align:center;margin-top:24px;font-size:.82rem;color:var(--text-muted);"><i class="fas fa-envelope" style="color:var(--accent-bright);margin-right:8px;"></i> Contact: <a href="mailto:205yf433w@mozmail.com" style="color:var(--accent-bright);text-decoration:none;">205yf433w@mozmail.com</a></p>
         </section>
 
         <!-- ===== PROXY ===== -->
         <section id="proxy" class="page-section">
-            <div class="section-head"><h2 class="section-title"><i class="fas fa-globe"></i> Scramjet Proxy Browser</h2></div>
             <div class="proxy-wrapper">
                 <iframe src="/scramjet/index.html" id="proxyFrame" referrerpolicy="no-referrer"></iframe>
             </div>
@@ -798,7 +751,6 @@
 
         <!-- ===== LEGAL ===== -->
         <section id="legal" class="page-section">
-            <div class="section-head"><h2 class="section-title"><i class="fas fa-scale-balanced"></i> Legal</h2></div>
             <div class="legal-tabs">
                 <button class="legal-tab active" onclick="switchLegalTab('terms')">Terms of Service</button>
                 <button class="legal-tab" onclick="switchLegalTab('privacy')">Privacy Policy</button>
@@ -812,7 +764,7 @@
                 <p>By accessing or using Lowkey Chopped Elite ("the Site"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Site. These terms apply to all visitors, users, and others who access the Site.</p>
 
                 <h3>2. Description of Service</h3>
-                <p>The Site is a web-based platform that provides access to browser games, applications, a web proxy service, and a movies & TV shows directory. The movies and TV shows section displays metadata (titles, posters, descriptions) sourced from TMDB and links to third-party streaming providers. The Site does not host, own, or claim ownership of any third-party games, applications, video content, or media accessible through it. All games, applications, movies, and TV shows remain the intellectual property of their respective owners.</p>
+                <p>The Site is a web-based platform that provides access to browser games, applications, and a web proxy service. The Site does not host, own, or claim ownership of any third-party games, applications, or media accessible through it. All games and applications remain the intellectual property of their respective owners.</p>
 
                 <h3>3. Age Restrictions & COPPA Compliance</h3>
                 <p>The Site is intended for users aged 13 and older, in compliance with the Children's Online Privacy Protection Act (COPPA). We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately. Users under 13 must have parental consent and supervision to use the Site.</p>
@@ -821,7 +773,7 @@
                 <p>The Site is an independent platform and is not affiliated with, endorsed by, or sponsored by any school, school district, educational institution, or government entity. Users are solely responsible for complying with their school's or employer's acceptable use policies, internet usage guidelines, and applicable rules. The creators of the Site are not responsible for any disciplinary action, academic consequences, or other repercussions resulting from the use of the Site on school networks, devices, or during school hours. By using the Site, you acknowledge that you are responsible for understanding and following your institution's policies.</p>
 
                 <h3>5. DMCA & Copyright Compliance</h3>
-                <p>The Site respects the intellectual property rights of others and expects its users to do the same. All games, applications, movies, television shows, and media accessible through the Site are hosted on third-party servers or embedded from their original sources. The Site does not store, distribute, or modify copyrighted files. The movies and TV shows displayed on the Site use metadata from TMDB (The Movie Database) and are streamed through third-party embed providers. The Site does not host any video content. If you are a copyright owner and believe your work has been made available through the Site in a way that constitutes copyright infringement, please submit a DMCA takedown notice to <a href="mailto:205yf433w@mozmail.com">205yf433w@mozmail.com</a> including: (a) identification of the copyrighted work, (b) identification of the infringing material and its location, (c) your contact information, (d) a statement of good faith belief, and (e) a statement under penalty of perjury. Upon receipt of a valid notice, the link to the material will be promptly removed within 24-48 hours.</p>
+                <p>The Site respects the intellectual property rights of others and expects its users to do the same. All games, applications, and media accessible through the Site are hosted on third-party servers or embedded from their original sources. The Site does not store, distribute, or modify copyrighted files. If you are a copyright owner and believe your work has been made available through the Site in a way that constitutes copyright infringement, please submit a DMCA takedown notice to <a href="mailto:205yf433w@mozmail.com">205yf433w@mozmail.com</a> including: (a) identification of the copyrighted work, (b) identification of the infringing material and its location, (c) your contact information, (d) a statement of good faith belief, and (e) a statement under penalty of perjury. Upon receipt of a valid notice, the link to the material will be promptly removed within 24-48 hours.</p>
 
                 <h3>6. Acceptable Use Policy</h3>
                 <p>You agree not to: (a) use the Site for any illegal purpose or in violation of any local, state, national, or international law; (b) attempt to breach, disrupt, or interfere with the Site's security, servers, or network; (c) upload or transmit viruses, malware, or malicious code; (d) use automated means (bots, scrapers) to access the Site in a manner that sends more requests than a human could reasonably produce; (e) use the proxy service to access illegal content, engage in harassment, or violate any third party's terms of service; (f) impersonate others or misrepresent your affiliation.</p>
@@ -873,8 +825,6 @@
                 <h3>4. Third-Party Services</h3>
                 <p>The Site integrates the following third-party services, each governed by their own privacy policies:</p>
                 <ul>
-                    <li><strong>TMDB API</strong> (themoviedb.org) — used to fetch movie and TV show metadata (titles, posters, descriptions) for the Movies page. TMDB may receive standard API request data per their privacy policy.</li>
-                    <li><strong>Streaming Providers</strong> — the Movies & TV section may embed or link to third-party streaming platforms. The Site does not host video files; all playback occurs on external servers governed by their own privacy policies.</li>
                     <li><strong>CDN Providers</strong> (cdnjs.cloudflare.com, fonts.googleapis.com, unpkg.com) — used to serve fonts, icons, and libraries. These providers may log standard CDN request data.</li>
                     <li><strong>WISP Proxy Servers</strong> — the Scramjet proxy connects to third-party WISP servers to relay web traffic. These servers may process network traffic but do not receive personal identifying information from the Site.</li>
                 </ul>
@@ -910,7 +860,6 @@
 
         <!-- ===== SETTINGS ===== -->
         <section id="settings" class="page-section">
-            <div class="section-head"><h2 class="section-title"><i class="fas fa-sliders"></i> Settings</h2></div>
             <div class="settings-grid">
                 <div class="settings-card">
                     <h3><i class="fas fa-external-link-alt"></i> about:blank method</h3>
@@ -962,13 +911,6 @@
     <script src="/n/gamesData.js"></script>
     <script src="/n/truffledData.js"></script>
     <script>
-        // --- TMDB CONFIGURATION ---
-        const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1M2Q0N2VjMzlmZDc4YWFmNGQ0YmNmYTIyYzYwNDAyNSIsIm5iZiI6MTc4Mjc5NjU1MS4wOTEsInN1YiI6IjZhNDM1MTA3MmU3MGQzNmFiNTJkNzliOSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.TysLpuJRCHC8tDmOQyp-ePZD4NGPt_huy7DuSbJfZV4'; 
-        
-        let currentMediaTab = 'movie';
-        let activeShowData = null;
-        let mediaSearchDebounce;
-
         let settings = { particlesEnabled: true, particleCount: 30, panicKey: '`', panicUrl: 'https://classroom.google.com/h' };
 
         const gameList = [
@@ -1106,7 +1048,6 @@
             { n: "Tiktok (Web Version)", d: "", i: "/images/tiktok.png", u: "/scramjet/embed.html#https://tiktok.com" },
             { n: "RetroArch", d: "", i: "/images/retroarch.png", u: "/apps/retroarch/index.html" },
             { n: "Dreamcast Emulator", d: "Sega, lucidx190", i: "/images/dreamcast.png", u: "/apps/dreamcast/index.html" },
-            { n: "Movies (Osmium)", d: "", i: "/assets/movies.png", u: "/g/load/movies.html" },
             { n: "Android Emulator", d: "now.gg", i: "/g/images/nowggfun.png", u: "/n/clandroid.html" },
         ];
         
@@ -1354,151 +1295,10 @@
             if (gameGrid) { gameGrid.innerHTML = ''; renderBatch(gameGrid, siteGameList); }
             if (appGrid) { appGrid.innerHTML = ''; renderBatch(appGrid, siteAppList); }
             if (creds) creds.innerHTML = teamList.map(t => `<div class="elite-card"><div class="elite-thumb"${t.c?` style="box-shadow:0 0 30px ${t.c}55,0 0 60px ${t.c}33"`:''}><img src="${t.i}" loading="lazy" decoding="async"></div><div class="credit-name"${t.c?` style="color:#fff;text-shadow:0 0 10px ${t.c},0 0 30px ${t.c},0 0 60px ${t.c}cc,0 0 100px ${t.c}88"`:''}>${t.n}</div><div class="credit-role" style="font-size:0.7rem;opacity:1;color:${t.c||'var(--text-muted)'}${t.c?`;text-shadow:0 0 8px ${t.c},0 0 20px ${t.c}aa`:''}">${t.r}</div></div>`).join('');
-            fetchTrendingMedia();
-        }
-
-        // --- TMDB SYSTEM ENGINES ---
-        async function tmdbFetch(endpoint) {
-            const options = {
-                method: 'GET',
-                headers: {
-                    accept: 'application/json',
-                    Authorization: `Bearer ${TMDB_TOKEN}`
-                }
-            };
-            try {
-                const response = await fetch(`https://api.themoviedb.org/3${endpoint}`, options);
-                return await response.json();
-            } catch (error) {
-                console.error('TMDB Error Engine:', error);
-                return null;
-            }
-        }
-
-        async function fetchTrendingMedia() {
-            const data = await tmdbFetch(`/trending/${currentMediaTab}/week?language=en-US`);
-            if (data && data.results) {
-                renderMediaItems(data.results);
-            }
-        }
-
-        async function onMediaSearch() {
-            clearTimeout(mediaSearchDebounce);
-            mediaSearchDebounce = setTimeout(async () => {
-            const query = document.getElementById('mediaSearch').value.trim();
-            if (!query) {
-                fetchTrendingMedia();
-                return;
-            }
-            const data = await tmdbFetch(`/search/${currentMediaTab}?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=1`);
-            if (data && data.results) {
-                renderMediaItems(data.results);
-            }
-            }, 400);
-        }
-
-        function switchMediaTab(tab) {
-            currentMediaTab = tab;
-            document.getElementById('tab-movie').classList.toggle('active', tab === 'movie');
-            document.getElementById('tab-tv').classList.toggle('active', tab === 'tv');
-            document.getElementById('mediaSearch').value = '';
-            fetchTrendingMedia();
-        }
-
-        function renderMediaItems(items) {
-            const movieGrid = document.getElementById('movieGrid');
-            if (!movieGrid) return;
-
-            movieGrid.innerHTML = items.map(m => {
-                const title = m.title || m.name || "Unknown Title";
-                const posterPath = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : 'https://via.placeholder.com/400x600?text=No+Poster';
-                
-                if (currentMediaTab === 'movie') {
-                    const embedUrl = `https://vidking.net/embed/movie/${m.id}`;
-                    return `
-                        <div class="elite-card" onclick="openGame('${embedUrl}', '${title.replace(/'/g, "\\'")}', '${posterPath}', '')">
-                            <div class="movie-thumb"><img src="${posterPath}" loading="lazy" decoding="async"></div>
-                            <div class="game-title">${title}</div>
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <div class="elite-card" onclick="openTVShow('${m.id}', '${title.replace(/'/g, "\\'")}', '${posterPath}')">
-                            <div class="movie-thumb"><img src="${posterPath}" loading="lazy" decoding="async"></div>
-                            <div class="game-title">${title}</div>
-                        </div>
-                    `;
-                }
-            }).join('');
-        }
-
-        // --- TV EPISODIC LOGIC ENGINE ---
-        async function openTVShow(showId, title, icon) {
-            document.getElementById('activeGameTitle').innerText = title + " (Loading Seasons...)";
-            document.getElementById('activeGameIcon').src = icon;
-            document.getElementById('activeGameDesc').innerText = '';
-            
-            const controlsBar = document.getElementById('showControlsBar');
-            controlsBar.style.display = 'flex';
-
-            const overlay = document.getElementById('gameOverlay');
-            overlay.style.display = 'flex';
-            setTimeout(() => overlay.classList.add('active'), 10);
-            document.body.style.overflow = 'hidden';
-
-            const showData = await tmdbFetch(`/tv/${showId}?language=en-US`);
-            if (!showData || !showData.seasons || showData.seasons.length === 0) {
-                document.getElementById('activeGameTitle').innerText = title;
-                document.getElementById('gameFrame').src = `https://vidking.net/embed/tv/${showId}/1/1`;
-                return;
-            }
-
-            activeShowData = showData;
-            document.getElementById('activeGameTitle').innerText = title;
-
-            const seasonSelect = document.getElementById('seasonSelect');
-            seasonSelect.innerHTML = showData.seasons
-                .filter(s => s.season_number > 0)
-                .map(s => `<option value="${s.season_number}">${s.name}</option>`).join('');
-
-            if(seasonSelect.innerHTML === "") {
-                seasonSelect.innerHTML = showData.seasons.map(s => `<option value="${s.season_number}">${s.name}</option>`).join('');
-            }
-
-            await loadEpisodesForSelectedSeason();
-        }
-
-        async function loadEpisodesForSelectedSeason() {
-            if (!activeShowData) return;
-            const seasonNum = document.getElementById('seasonSelect').value;
-            const episodeSelect = document.getElementById('episodeSelect');
-            episodeSelect.innerHTML = '<option>Loading...</option>';
-
-            const seasonData = await tmdbFetch(`/tv/${activeShowData.id}/season/${seasonNum}?language=en-US`);
-            if (seasonData && seasonData.episodes) {
-                episodeSelect.innerHTML = seasonData.episodes.map(e => 
-                    `<option value="${e.episode_number}">Ep ${e.episode_number}: ${e.name || ('Episode ' + e.episode_number)}</option>`
-                ).join('');
-                
-                updateTVFrameSource();
-            } else {
-                episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-                updateTVFrameSource();
-            }
-        }
-
-        function updateTVFrameSource() {
-            if (!activeShowData) return;
-            const id = activeShowData.id;
-            const season = document.getElementById('seasonSelect').value;
-            const episode = document.getElementById('episodeSelect').value;
-            document.getElementById('gameFrame').src = `https://vidking.net/embed/tv/${id}/${season}/${episode}`;
         }
 
         // --- BASELINE APP STRUCTS ---
         function openGame(url, title, icon, desc) {
-            document.getElementById('showControlsBar').style.display = 'none';
-            activeShowData = null;
 
             const overlay = document.getElementById('gameOverlay');
             document.getElementById('activeGameTitle').innerText = title;
@@ -1516,9 +1316,7 @@
             setTimeout(() => { 
                 overlay.style.display = 'none'; 
                 document.getElementById('gameFrame').src = ''; 
-                document.getElementById('showControlsBar').style.display = 'none';
                 document.getElementById('activeGameDesc').innerText = '';
-                activeShowData = null;
             }, 400);
             document.body.style.overflow = 'auto';
         }
@@ -1722,8 +1520,6 @@
 
         /* --- player lifecycle: show loader when a game opens --- */
         function openGame(url, title, icon, desc) {
-            document.getElementById('showControlsBar').style.display = 'none';
-            activeShowData = null;
             const overlay = document.getElementById('gameOverlay');
             document.getElementById('activeGameTitle').innerText = title;
             document.getElementById('activeGameIcon').src = icon;
@@ -1741,23 +1537,13 @@
             setTimeout(() => {
                 overlay.style.display = 'none';
                 document.getElementById('gameFrame').src = '';
-                document.getElementById('showControlsBar').style.display = 'none';
                 document.getElementById('activeGameDesc').innerText = '';
-                activeShowData = null;
                 const l = document.getElementById('playerLoading');
                 if (l) l.classList.add('hide');
             }, 350);
             document.body.style.overflow = 'auto';
         }
 
-        function updateTVFrameSource() {
-            if (!activeShowData) return;
-            const id = activeShowData.id;
-            const season = document.getElementById('seasonSelect').value;
-            const episode = document.getElementById('episodeSelect').value;
-            document.getElementById('gameFrame').src = `https://vidking.net/embed/tv/${id}/${season}/${episode}`;
-            showPlayerLoader();
-        }
 
         /* --- boot: counts, particle label, panic bind label --- */
         document.addEventListener('DOMContentLoaded', () => {

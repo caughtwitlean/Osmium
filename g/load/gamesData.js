@@ -107,17 +107,6 @@ let games = [
         "pin": true
     },
     {
-        "name": "Movies",
-        "iframe": "/reactive/embed.html#https://watch.spencerdevs.xyz/",
-        "img": "assets/movies.png",
-        "identifier": "movies",
-        "warning": "this doesn't work in firefox, also i cant remove time limits and refresh the game if you get an error",
-        "servers": 2,
-        "iframe2": "/reactive/embed.html#https://www2.movieorca.com/",
-        "app": true,
-        "pin": true
-    },
-    {
         "name": "Others",
         "iframe": "/reactive/embed.html#https://nowgg.fun",
         "img": "g/images/nowggfun.png",

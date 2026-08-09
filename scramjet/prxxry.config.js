@@ -2,7 +2,7 @@
 const basePath = '/Staticsj/';
 
 // Match the default in script.js
-const DEFAULT_WISP = "wss://wisp.rhw.one/wisp/"; 
+const DEFAULT_WISP = "wss://lwkchpbeta.oversizedpoolfloatie.store/wisp"; 
 
 let _CONFIG = {
   wispurl: localStorage.getItem("proxServer") || DEFAULT_WISP,
@@ -11,7 +11,7 @@ let _CONFIG = {
 
 // ... keep the rest of the file logic as is, just ensure the default above matches ...
 // Verify default WISP URL passes validation
-console.assert(isValidWispUrl("wss://wisp.rhw.one/wisp/"), "Default WISP URL should pass validation");
+console.assert(isValidWispUrl("wss://lwkchpbeta.oversizedpoolfloatie.store/wisp"), "Default WISP URL should pass validation");
 
 // Valid URL patterns for WISP servers
 const validWispPatterns = [
