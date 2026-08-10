@@ -6,7 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>about:blank</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14'%3E🎮%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="style.css">
+    <!-- Shared proxy configuration (must load first) -->
+    <script src="wisp-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Destroyed12121/Staticsj@main/JS/scramjet.all.js"></script>
+    <script type="module">
+        // Pinned to v2.1.7 — newer bare-mux builds removed the fetch method
+        // that scramjet's core relies on (matches the bundled bareworker).
+        import * as BareMux from "https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.1.7/dist/index.mjs";
+        window.BareMux = BareMux;
+    </script>
+    <script>
+        // BareMux fallback for safety if the module import fails
+        if (typeof window.BareMux === "undefined") {
+            window.BareMux = { BareMuxConnection: class { constructor() { } async setTransport() { return; } } };
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -19,7 +37,7 @@
             height: 100%;
             overflow: hidden;
             background: var(--bg);
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
         }
 
         #iframe-container {
@@ -56,14 +74,14 @@
             top: 0;
             left: 0;
             z-index: 10;
-            background: rgba(10, 10, 10, 0.4);
+            background: var(--bg);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             transition: opacity 0.3s ease, visibility 0.3s;
         }
 
         .message-content {
-            max-width: 400px;
+            max-width: 420px;
             padding: 20px;
         }
 
@@ -78,6 +96,13 @@
             color: var(--text-muted);
             font-size: 13px;
             word-break: break-all;
+        }
+
+        .message-content .loading-server {
+            color: var(--success);
+            font-size: 11px;
+            margin-top: 6px;
+            word-break: normal;
         }
 
         .spinner {
@@ -113,18 +138,32 @@
             border-color: var(--border-light);
             color: var(--text);
         }
+
+        .error-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .error-btn {
+            padding: 8px 16px;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border-light);
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .error-btn:hover {
+            background: var(--accent-soft);
+            border-color: var(--accent);
+            color: var(--accent-bright);
+        }
     </style>
-        <script src="https://cdn.jsdelivr.net/gh/Destroyed12121/Staticsj@main/JS/scramjet.all.js"></script>
-        <script type="module">
-                import * as BareMux from "https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.1.2/dist/index.mjs";
-                window.BareMux = BareMux;
-        </script>
-        <script>
-            // BareMux fallback for safety if module import fails
-            if (typeof window.BareMux === 'undefined') {
-                window.BareMux = { BareMuxConnection: class { constructor(){} async setTransport(){ return; } } };
-            }
-        </script>
 </head>
 
 <body>
@@ -133,6 +172,7 @@
             <div class="spinner"></div>
             <h1 id="loading-title">Connecting</h1>
             <p id="loading-url">Initializing proxy...</p>
+            <p id="loading-server" class="loading-server"></p>
             <button id="skip-btn">Skip</button>
         </div>
     </div>
@@ -140,6 +180,9 @@
         <div class="message-content">
             <h1>Connection Error</h1>
             <p id="error-message">An error occurred.</p>
+            <div class="error-actions">
+                <button class="error-btn" onclick="location.reload()">Retry</button>
+            </div>
         </div>
     </div>
     <div id="iframe-container"></div>
@@ -148,10 +191,13 @@
         const loadingContainer = document.getElementById('loading');
         const loadingTitle = document.getElementById('loading-title');
         const loadingUrl = document.getElementById('loading-url');
+        const loadingServer = document.getElementById('loading-server');
         const errorContainer = document.getElementById('error');
         const errorMessage = document.getElementById('error-message');
         const iframeContainer = document.getElementById('iframe-container');
         const skipBtn = document.getElementById('skip-btn');
+
+        const WISP = window.WispConfig;
 
         let loadingTimeout = null;
         let skipButtonTimeout = null;
@@ -173,48 +219,19 @@
             iframeContainer.classList.add('loaded');
         }
 
-        // WISP servers used for automatic failover (fastest reachable one wins)
-        const WISP_SERVERS = [
-            { name: "Lowkey Wisp", url: "wss://lwkchpbeta.oversizedpoolfloatie.store/wisp" }
-        ];
-
-        // Probes WISP servers and resolves with the first one that connects.
-        // A saved server is tried first, then the known-good list, so a dead
-        // server never blocks the game from loading for more than ~2.5s.
-        function pickBestWisp() {
-            return new Promise((resolve) => {
-                let saved = null;
-                try { saved = localStorage.getItem('proxServer'); } catch (_e) {}
-                const candidates = [];
-                if (saved && /^wss?:\/\//.test(saved)) candidates.push(saved);
-                WISP_SERVERS.forEach(s => { if (s.url !== saved) candidates.push(s.url); });
-
-                const fallback = saved || WISP_SERVERS[0].url;
-                let idx = 0;
-                let settled = false;
-                const totalTimer = setTimeout(() => { settled = true; resolve(fallback); }, 4500);
-
-                function tryNext() {
-                    if (settled) return;
-                    if (idx >= candidates.length) { clearTimeout(totalTimer); settled = true; resolve(fallback); return; }
-                    const url = candidates[idx++];
-                    let ws;
-                    try { ws = new WebSocket(url); } catch (_e) { tryNext(); return; }
-                    const t = setTimeout(() => { try { ws.close(); } catch (_e) {} tryNext(); }, 2500);
-                    ws.onopen = () => {
-                        if (settled) return;
-                        clearTimeout(t); clearTimeout(totalTimer); settled = true;
-                        try { ws.close(); } catch (_e) {}
-                        try { localStorage.setItem('proxServer', url); } catch (_e) {}
-                        resolve(url);
-                    };
-                    ws.onerror = () => { clearTimeout(t); try { ws.close(); } catch (_e) {} tryNext(); };
-                }
-                tryNext();
-            });
+        function withTimeout(promise, ms, message) {
+            return Promise.race([
+                Promise.resolve(promise),
+                new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+            ]);
         }
 
         async function init() {
+            if (!WISP) {
+                showError("Proxy configuration failed to load. Try refreshing.");
+                return;
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const shouldSkip = urlParams.has('skip');
             const targetUrl = window.location.hash.substring(1);
@@ -255,8 +272,8 @@
 
             // Allow WISP override via query (e.g., ?wisp=wss://host/wisp/)
             const wispOverride = urlParams.get('wisp');
-            if (wispOverride && /^wss:\/\//.test(wispOverride)) {
-                try { localStorage.setItem('proxServer', wispOverride); } catch(_e) {}
+            if (wispOverride && WISP.isValidWispUrl(wispOverride)) {
+                try { localStorage.setItem(WISP.SERVER_KEY, wispOverride); } catch (_e) { /* noop */ }
             }
 
             // Retry logic for initialization
@@ -268,16 +285,14 @@
                 console.log(`Embed: Init attempt ${initAttempt}/${maxInitRetries}`);
 
                 try {
+                    if (typeof $scramjetLoadController !== "function") {
+                        throw new Error("Scramjet core failed to load");
+                    }
                     const { ScramjetController } = $scramjetLoadController();
                     const scramjet = new ScramjetController({
                         prefix: basePath + "scramjet/",
-                        files: {
-                            wasm: 'https://cdn.jsdelivr.net/gh/Destroyed12121/Staticsj@main/JS/scramjet.wasm.wasm',
-                            all: 'https://cdn.jsdelivr.net/gh/Destroyed12121/Staticsj@main/JS/scramjet.all.js',
-                            sync: 'https://cdn.jsdelivr.net/gh/Destroyed12121/Staticsj@main/JS/scramjet.sync.js'
-                        }
+                        files: WISP.SCRAMJET_FILES
                     });
-                    if (!$scramjetLoadController) throw new Error('Scramjet controller not found');
                     await scramjet.init();
 
                     // Register service worker with error handling
@@ -290,22 +305,21 @@
                         throw new Error("Service Worker registration failed");
                     }
 
-                    const wispUrl = await pickBestWisp();
+                    // Probe servers (saved one first) and pick the fastest reachable
+                    const wispUrl = await WISP.pickBestWisp({ perServerTimeoutMs: 2500, maxTotalMs: 12000 });
+                    const serverName = WISP.serverName(wispUrl);
+                    if (loadingServer && !shouldSkip) {
+                        loadingServer.textContent = "Connected to " + serverName;
+                    }
 
                     // Wait for SW ready with timeout
-                    const swReadyPromise = navigator.serviceWorker.ready;
-                    const swReadyTimeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("SW ready timeout")), 10000)
-                    );
+                    await withTimeout(navigator.serviceWorker.ready, 10000, "SW ready timeout");
 
-                    await Promise.race([swReadyPromise, swReadyTimeout]);
-
-                    // Force update to get latest SW
+                    // Force update to get latest SW code
                     reg.update().catch(e => console.warn("SW update check failed:", e));
 
-                    // Wait for controller with timeout
+                    // Wait for controller with timeout (first visit)
                     if (!navigator.serviceWorker.controller) {
-                        console.log("Embed: Waiting for SW controller...");
                         const controllerPromise = new Promise(resolve => {
                             const onControllerChange = () => {
                                 navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
@@ -313,18 +327,19 @@
                             };
                             navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
                         });
-                        const controllerTimeout = new Promise(resolve => setTimeout(resolve, 5000));
-                        await Promise.race([controllerPromise, controllerTimeout]);
+                        await Promise.race([controllerPromise, new Promise(r => setTimeout(r, 5000))]);
                     }
 
-                    // Send config to SW
+                    // Send config to SW (custom URLs included so failover can honor them)
+                    const configMsg = {
+                        type: 'config',
+                        wispurl: wispUrl,
+                        customUrls: WISP.getStoredWisps().map(s => s.url)
+                    };
                     const sw = reg.active || navigator.serviceWorker.controller;
-                    if (sw) {
-                        console.log("Embed: Sending config to SW:", wispUrl);
-                        sw.postMessage({ type: 'config', wispurl: wispUrl });
-                    }
+                    if (sw) sw.postMessage(configMsg);
                     if (navigator.serviceWorker.controller && navigator.serviceWorker.controller !== sw) {
-                        navigator.serviceWorker.controller.postMessage({ type: 'config', wispurl: wispUrl });
+                        navigator.serviceWorker.controller.postMessage(configMsg);
                     }
 
                     // Setup BareMux connection with retry
@@ -332,10 +347,10 @@
                     for (let connAttempt = 0; connAttempt < 3; connAttempt++) {
                         try {
                             connection = new BareMux.BareMuxConnection(basePath + 'bareworker.js');
-                            await Promise.race([
-                                connection.setTransport('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.28/dist/index.mjs', [{ wisp: wispUrl }]),
-                                new Promise((_, reject) => setTimeout(() => reject(new Error("Transport setup timeout")), 10000))
-                            ]);
+                            await withTimeout(
+                                connection.setTransport(WISP.TRANSPORT_URL, [{ wisp: wispUrl }]),
+                                10000, "Transport setup timeout"
+                            );
                             break;
                         } catch (connErr) {
                             console.warn(`Embed: Connection attempt ${connAttempt + 1} failed:`, connErr);
@@ -351,7 +366,7 @@
 
                     const frame = scramjet.createFrame();
                     frame.frame.id = 'embed-frame';
-                    // Allow the proxied app to use everything it needs (fullscreen, pointer lock, gamepad, media, etc.)
+                    // Allow the proxied app to use everything it needs
                     frame.frame.setAttribute('allow', 'fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; gamepad; pointer-lock; accelerometer; gyroscope; magnetometer; microphone; camera; display-capture; xr-spatial-tracking; payment');
                     frame.frame.setAttribute('allowfullscreen', '');
 
@@ -370,18 +385,19 @@
 
                         frame.frame.addEventListener('error', (err) => {
                             console.error("Embed: Frame error:", err);
-                            // Don't immediately show error - SW may retry
+                            // Don't immediately show error — SW may retry
                             loadingTitle.textContent = 'Retrying...';
                         });
 
                         loadingTimeout = setTimeout(() => {
-                            if (!frame.frame.contentWindow || frame.frame.contentWindow.location.href === 'about:blank') {
-                                showError(`Timeout: Content took too long to load. Try refreshing or switch proxy servers.`);
-                            }
+                            try {
+                                if (!frame.frame.contentWindow || frame.frame.contentWindow.location.href === 'about:blank') {
+                                    showError(`Timeout: Content took too long to load. Try refreshing or switch proxy servers.`);
+                                }
+                            } catch (_e) { /* frame navigated — it's loading */ }
                         }, 60000);
                     } else {
-                        // Even in skip mode, never leave the user staring at a blank frame.
-                        // If the top document hasn't loaded within 30s, show the error screen.
+                        // In skip mode, never leave the user staring at a blank frame.
                         loadingTimeout = setTimeout(() => {
                             try {
                                 const win = frame.frame.contentWindow;
@@ -389,7 +405,7 @@
                                 if (!win || href === 'about:blank' || href === '') {
                                     showError(`Content took too long to load. Try refreshing or switch proxy servers.`);
                                 }
-                            } catch (_e) { /* frame navigated cross-origin = it's loading, leave it alone */ }
+                            } catch (_e) { /* cross-origin frame = loading, leave it alone */ }
                         }, 30000);
                     }
 

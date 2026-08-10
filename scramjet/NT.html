@@ -1,383 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <title>New Tab</title>
-
-    <script src="/s/text.js"></script>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>New Tab</title>
+  <script src="/s/text.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {
-      /* Core colors */
-      --bg: #0a0a0a;
-      --surface: #0f0f0f;
-      --surface-hover: #1a1a1a;
-      --surface-active: #252525;
-      --border: #1f1f1f;
-      --border-light: #2a2a2a;
-
-      /* Text */
-      --text: #e4e4e7;
-      --text-muted: #71717a;
-      --text-dim: #52525b;
-
-      /* Accent */
-      --accent: #ffffff;
-      --accent-dim: rgba(255, 255, 255, 0.8);
-      --accent-glow: rgba(255, 255, 255, 0.1);
-
-      /* Status colors */
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --error: #ef4444;
-      --info: #3b82f6;
-
-      /* Shadows */
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-      --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-
-      /* Spacing */
-      --space-xs: 4px;
-      --space-sm: 8px;
-      --space-md: 16px;
-      --space-lg: 24px;
-      --space-xl: 32px;
-      --space-2xl: 48px;
-
-      /* Border radius */
-      --radius-sm: 4px;
-      --radius-md: 8px;
-      --radius-lg: 12px;
-      --radius-xl: 16px;
-      --radius-full: 9999px;
-
-      /* Transitions */
-      --transition-fast: 0.1s ease;
-      --transition-normal: 0.2s ease;
-      --transition-slow: 0.3s ease;
-
-      /* Typography */
-      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-      /* Background */
-      --bg-image: none;
+    :root{
+      --accent:#78716c;--accent-bright:#a8a29e;
+      --accent-soft:rgba(120,113,108,.14);--accent-glow:rgba(120,113,108,.4);
+      --grad:linear-gradient(135deg,#a8a29e,#57534e);
+      --border:#292524;--border-light:#44403c;
+      --text:#fff;--text-muted:#a8a29e;--text-dim:#78716c;
+      --bg:#0c0a09;--surface:#1c1917;--surface-2:#231f1f;--surface-3:#2b2626;
+      --shadow-sm:0 2px 10px rgba(0,0,0,.35);
+      --font:'Poppins',system-ui,-apple-system,sans-serif;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font);color:var(--text)}
+    body{
+      position:relative;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:32px 18px 60px;
+      background:
+        radial-gradient(ellipse 60% 45% at 15% -5%,var(--accent-soft) 0%,transparent 60%),
+        radial-gradient(ellipse 55% 40% at 95% 10%,var(--accent-soft) 0%,transparent 60%),
+        radial-gradient(ellipse 70% 55% at 50% 110%,var(--accent-glow) 0%,transparent 60%),
+        var(--bg);
     }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-    }
-
-    .clock {
-      font-size: 4rem;
-      font-weight: 600;
-      letter-spacing: -2px;
-      margin-bottom: 8px;
-      color: var(--accent);
-    }
-
-    .date {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-    }
-
-    .search-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 16px;
-      width: 100%;
-      max-width: 500px;
-      margin-bottom: 40px;
-    }
-
-    .search-box i {
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .search-box input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    .search-box input::placeholder {
-      color: var(--text-dim);
-    }
-
-    .search-box select {
-      background: var(--surface-hover);
-      border: none;
-      border-radius: 6px;
-      color: var(--text-muted);
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      outline: none;
-    }
-
-    .shortcuts {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 16px;
-      max-width: 500px;
-      width: 100%;
-    }
-
-    .shortcut {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .shortcut-icon {
-      width: 52px;
-      height: 52px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-
-    .shortcut:hover .shortcut-icon {
-      background: var(--surface-hover);
-      transform: translateY(-2px);
-    }
-
-    .shortcut-icon img {
-      width: 22px;
-      height: 22px;
-      filter: brightness(0) invert(0.7);
-    }
-
-    .shortcut-icon i {
-      font-size: 20px;
-      color: var(--text-muted);
-    }
-
-    .shortcut-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-align: center;
-      max-width: 60px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .shortcut:hover .shortcut-label {
-      color: var(--text);
-    }
-
-    .quote {
-      position: fixed;
-      bottom: 24px;
-      font-size: 13px;
-      color: var(--text-dim);
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .loader {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .loader.show {
-      display: flex;
-    }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+    .clock{font-size:clamp(3.6rem,10vw,5.2rem);font-weight:800;letter-spacing:-3px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 28px var(--accent-glow))}
+    .date{font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--text-muted);margin:8px 0 36px;text-transform:uppercase}
+    .search-box{display:flex;align-items:center;gap:10px;width:100%;max-width:520px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:999px;margin-bottom:44px;transition:all .22s ease;box-shadow:var(--shadow-sm)}
+    .search-box:focus-within{border-color:var(--accent);background:var(--surface-2);box-shadow:0 0 0 3px var(--accent-soft),0 0 22px var(--accent-glow);transform:translateY(-1.5px)}
+    .search-box>i{color:var(--text-dim);font-size:12px;transition:color .15s}
+    .search-box:focus-within>i{color:var(--accent-bright)}
+    .search-box input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:13.5px;font-family:inherit}
+    .search-box input::placeholder{color:var(--text-dim)}
+    .search-box select{background:var(--surface-3);border:1px solid var(--border);border-radius:999px;color:var(--text-muted);padding:4px 10px;font-size:10px;font-family:inherit;cursor:pointer;outline:none;transition:all .12s}
+    .search-box select:hover{border-color:var(--border-light);color:var(--text)}
+    .shortcuts{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;max-width:520px;width:100%}
+    .shortcut{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;user-select:none}
+    .shortcut-icon{position:relative;width:54px;height:54px;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;transition:all .22s ease;overflow:hidden;box-shadow:var(--shadow-sm)}
+    .shortcut-icon::after{content:"";position:absolute;inset:0;border-radius:13px;background:var(--grad);opacity:0;transition:opacity .22s}
+    .shortcut-icon>*{position:relative;z-index:1}
+    .shortcut:hover .shortcut-icon{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 6px 20px var(--accent-glow)}
+    .shortcut:hover .shortcut-icon::after{opacity:.18}
+    .shortcut-icon img{width:22px;height:22px;filter:brightness(0) invert(.7);transition:filter .15s}
+    .shortcut:hover .shortcut-icon img{filter:brightness(0) invert(.95)}
+    .shortcut-icon i{font-size:20px;color:var(--text-muted);transition:color .15s}
+    .shortcut:hover .shortcut-icon i{color:var(--accent-bright)}
+    .shortcut-label{font-size:10.5px;font-weight:500;color:var(--text-dim);text-align:center;max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .15s;letter-spacing:.1px}
+    .shortcut:hover .shortcut-label{color:var(--text)}
+    .loader{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:100}
+    .loader.show{display:flex}
+    .loader-spinner{width:34px;height:34px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--accent-bright);animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .clock,.date,.search-box,.shortcuts,.quote{animation:rise .45s ease both}
+    .date{animation-delay:.03s}.search-box{animation-delay:.06s}.shortcuts{animation-delay:.12s}.quote{animation-delay:.18s}
+    @media(max-width:560px){.shortcuts{grid-template-columns:repeat(4,1fr);gap:12px}.clock{letter-spacing:-2px}}
   </style>
 </head>
-
 <body>
-  <div class="loader" id="loader">
-    <div class="spinner"></div>
-  </div>
-
-  <div class="clock" id="clock">00:00</div>
-  <div class="date" id="date"></div>
-
-  <form class="search-box" id="searchForm">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <input type="text" id="searchInput" placeholder="Search the web..." autocomplete="off">
-    <select id="engine">
-      <option value="https://search.brave.com/search?q=">Brave</option>
-      <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
-      <option value="https://www.google.com/search?q=">Google</option>
-    </select>
-  </form>
-
+  <div class="loader" id="loader"><div class="loader-spinner"></div></div>
+  <div class="clock" id="clock">00:00</div><div class="date" id="date"></div>
+  <form class="search-box" id="searchForm"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="searchInput" placeholder="Search the web..." autocomplete="off" spellcheck="false"><select id="engine"><option value="https://search.brave.com/search?q=">Brave</option><option value="https://duckduckgo.com/?q=">DuckDuckGo</option><option value="https://www.google.com/search?q=">Google</option></select></form>
   <div class="shortcuts" id="shortcuts">
-    <a class="shortcut" data-url="https://youtube.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg">
-      </div>
-      <span class="shortcut-label">YouTube</span>
-    </a>
-    <a class="shortcut" data-url="https://github.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg">
-      </div>
-      <span class="shortcut-label">GitHub</span>
-    </a>
-    <a class="shortcut" data-url="https://discord.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg">
-      </div>
-      <span class="shortcut-label">Discord</span>
-    </a>
-    <a class="shortcut" data-url="https://twitter.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/x.svg"></div>
-      <span class="shortcut-label">Twitter</span>
-    </a>
-    <a class="shortcut" data-url="https://reddit.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/reddit.svg">
-      </div>
-      <span class="shortcut-label">Reddit</span>
-    </a>
-    <a class="shortcut" data-url="https://www.xbox.com/en-us/play">
-      <div class="shortcut-icon"><img src="https://cdn-icons-png.flaticon.com/512/250/250562.png">
-      </div>
-      <span class="shortcut-label">Xbox</span>
-    </a>
-    <a class="shortcut" data-url="https://netflix.com">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/netflix.svg">
-      </div>
-      <span class="shortcut-label">Netflix</span>
-    </a>
-    <a class="shortcut" data-url="https://twitch.tv">
-      <div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg">
-      </div>
-      <span class="shortcut-label">Twitch</span>
-    </a>
-    <div class="shortcut" id="addShortcut">
-      <div class="shortcut-icon"><i class="fa-solid fa-plus"></i></div>
-      <span class="shortcut-label">Add</span>
-    </div>
+    <div class="shortcut" data-url="https://youtube.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg"></div><span class="shortcut-label">YouTube</span></div>
+    <div class="shortcut" data-url="https://github.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg"></div><span class="shortcut-label">GitHub</span></div>
+    <div class="shortcut" data-url="https://discord.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg"></div><span class="shortcut-label">Discord</span></div>
+    <div class="shortcut" data-url="https://twitter.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/x.svg"></div><span class="shortcut-label">Twitter</span></div>
+    <div class="shortcut" data-url="https://reddit.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/reddit.svg"></div><span class="shortcut-label">Reddit</span></div>
+    <div class="shortcut" data-url="https://www.xbox.com/en-us/play"><div class="shortcut-icon"><img src="https://cdn-icons-png.flaticon.com/512/250/250562.png"></div><span class="shortcut-label">Xbox</span></div>
+    <div class="shortcut" data-url="https://netflix.com"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/netflix.svg"></div><span class="shortcut-label">Netflix</span></div>
+    <div class="shortcut" data-url="https://twitch.tv"><div class="shortcut-icon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg"></div><span class="shortcut-label">Twitch</span></div>
+    <div class="shortcut" id="addShortcut"><div class="shortcut-icon"><i class="fa-solid fa-plus"></i></div><span class="shortcut-label">Add</span></div>
   </div>
-
-  <div class="quote" id="quote"></div>
-
   <script>
-    const $ = s => document.querySelector(s);
-    const nav = url => {
-      $('#loader').classList.add('show');
-      window.parent?.postMessage({ type: 'navigate', url }, '*');
-    };
-
-    // Clock
-    function updateClock() {
-      const now = new Date();
-      $('#clock').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      $('#date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    // Search
-    $('#searchForm').onsubmit = e => {
-      e.preventDefault();
-      const q = $('#searchInput').value.trim();
-      if (q) nav($('#engine').value + encodeURIComponent(q));
-    };
-
-    // Shortcuts
-    $('#shortcuts').onclick = e => {
-      const shortcut = e.target.closest('.shortcut[data-url]');
-      const addBtn = e.target.closest('#addShortcut');
-
-      if (shortcut) {
-        e.preventDefault();
-        nav(shortcut.dataset.url);
-      } else if (addBtn) {
-        const name = prompt("Shortcut name:");
-        if (!name) return;
-        let url = prompt("URL:");
-        if (!url) return;
-        if (!url.startsWith('http')) url = 'https://' + url;
-
-        const shortcuts = JSON.parse(localStorage.getItem('shortcuts') || '[]');
-        shortcuts.push({ name, url });
-        localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
-        renderCustom();
-      }
-    };
-
-    function renderCustom() {
-      document.querySelectorAll('.custom-shortcut').forEach(e => e.remove());
-      const shortcuts = JSON.parse(localStorage.getItem('shortcuts') || '[]');
-      const addBtn = $('#addShortcut');
-
-      shortcuts.forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'shortcut custom-shortcut';
-        div.dataset.url = s.url;
-        div.innerHTML = `
-          <div class="shortcut-icon"><i class="fa-solid fa-link"></i></div>
-          <span class="shortcut-label">${s.name}</span>
-        `;
-        addBtn.before(div);
-      });
-    }
-
-    // Quote
-    if (window.QUOTES?.length) {
-      $('#quote').textContent = window.QUOTES[Math.floor(Math.random() * window.QUOTES.length)];
-    }
-
-    renderCustom();
+    const $=s=>document.querySelector(s),nav=url=>{$('#loader').classList.add('show');window.parent?.postMessage({type:'navigate',url},'*')};
+    const V='--accent,--accent-bright,--accent-soft,--accent-glow,--grad,--border,--border-light,--text,--text-muted,--text-dim,--bg,--surface,--surface-2,--surface-3'.split(',');
+    function S(){try{const c=getComputedStyle(window.parent.document.documentElement),s=document.documentElement.style;V.forEach(v=>{const x=c.getPropertyValue(v).trim();if(x)s.setProperty(v,x)})}catch(_){}}S();
+    window.addEventListener('message',e=>{if(e.data&&e.data.type==='theme-accent')S()});
+    function T(){const n=new Date();$('#clock').textContent=n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});$('#date').textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+    T();setInterval(T,1000);
+    $('#searchForm').onsubmit=e=>{e.preventDefault();const q=$('#searchInput').value.trim();if(q)nav($('#engine').value+encodeURIComponent(q))};
+    $('#shortcuts').onclick=e=>{const s=e.target.closest('[data-url]'),a=e.target.closest('#addShortcut');if(s){e.preventDefault();nav(s.dataset.url)}else if(a){const n=prompt("Name:");if(!n)return;let u=prompt("URL:");if(!u)return;if(!u.startsWith('http'))u='https://'+u;const r=JSON.parse(localStorage.getItem('shortcuts')||'[]');r.push({name:n,url:u});localStorage.setItem('shortcuts',JSON.stringify(r));R()}};
+    function R(){document.querySelectorAll('.custom-shortcut').forEach(e=>e.remove());const a=JSON.parse(localStorage.getItem('shortcuts')||'[]'),x=$('#addShortcut');a.forEach(s=>{const d=document.createElement('div');d.className='shortcut custom-shortcut';d.dataset.url=s.url;d.innerHTML=`<div class="shortcut-icon"><i class="fa-solid fa-link"></i></div><span class="shortcut-label">${s.name}</span>`;x.before(d)})}
+R();
   </script>
 </body>
-
 </html>
