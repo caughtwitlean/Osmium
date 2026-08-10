@@ -1,10 +1,10 @@
 @echo off
-title Lowkey Chopped Elite - Local Server
+title osmium - Local Server
 cd /d "%~dp0"
 
 echo.
 echo   ========================================
-echo     LOWKEY CHOPPED ELITE - Local Server
+echo     osmium - Local Server
 echo   ========================================
 echo.
 
